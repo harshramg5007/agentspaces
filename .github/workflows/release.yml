@@ -1,0 +1,67 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    name: Build And Publish Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Download dependencies
+        run: go mod download
+      - name: Run release gates
+        run: |
+          ./scripts/check_public_surface.sh
+          go test -race ./...
+          python -m pip install --upgrade pip build
+          python -m pip install -e "sdk/python[async,dev]"
+          python -m unittest \
+            sdk/python/agent_space_sdk/tests/test_async_client_errors.py \
+            sdk/python/agent_space_sdk/tests/test_async_client_minimal_take.py \
+            sdk/python/agent_space_sdk/tests/test_complete_and_out.py
+          make docs-check
+      - name: Build server binaries
+        run: |
+          mkdir -p dist/bin
+          GOOS=linux GOARCH=amd64 go build -o dist/bin/agent-server-linux-amd64 ./cmd/server
+          GOOS=darwin GOARCH=arm64 go build -o dist/bin/agent-server-darwin-arm64 ./cmd/server
+          GOOS=windows GOARCH=amd64 go build -o dist/bin/agent-server-windows-amd64.exe ./cmd/server
+      - name: Build Python artifacts
+        run: python -m build sdk/python --sdist --wheel --outdir dist/python
+      - name: Verify LICENSE is packaged
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import tarfile
+          import zipfile
+
+          dist = Path("dist/python")
+          wheel = next(dist.glob("*.whl"))
+          sdist = next(dist.glob("*.tar.gz"))
+
+          with zipfile.ZipFile(wheel) as zf:
+              if not any(name.endswith("LICENSE") or "/licenses/LICENSE" in name for name in zf.namelist()):
+                  raise SystemExit("wheel is missing LICENSE")
+
+          with tarfile.open(sdist, "r:gz") as tf:
+              if not any(name.endswith("/LICENSE") for name in tf.getnames()):
+                  raise SystemExit("sdist is missing LICENSE")
+          PY
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/bin/*
+            dist/python/*

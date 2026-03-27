@@ -1,0 +1,1382 @@
+openapi: 3.0.3
+info:
+  title: Agent Spaces API
+  description: |
+    Source-available lifecycle API for Agent Spaces, a Postgres-backed coordination runtime
+    for multi-agent workflows.
+  version: 1.0.0
+  contact:
+    name: Urobora Inc Commercial Licensing
+    email: jase@urobora.ai
+  license:
+    name: Business Source License 1.1
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development server
+
+security:
+  - apiKey: []
+
+paths:
+  /agents:
+    post:
+      summary: Create a new agent
+      operationId: createAgent
+      tags:
+        - Agents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAgentRequest'
+      responses:
+        '201':
+          description: Agent created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /agents/{id}:
+    get:
+      summary: Get a agent by ID
+      operationId: getAgent
+      tags:
+        - Agents
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Agent ID
+      responses:
+        '200':
+          description: Agent found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    
+    put:
+      summary: Update a agent
+      operationId: updateAgent
+      tags:
+        - Agents
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Agent ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAgentRequest'
+      responses:
+        '200':
+          description: Agent updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /agents/query:
+    post:
+      summary: Query agents (non-destructive read)
+      operationId: queryAgents
+      tags:
+        - Agents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Query'
+      responses:
+        '200':
+          description: Query results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agents:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Agent'
+                  total:
+                    type: integer
+                    description: Total number of matching agents
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /agents/stats:
+    post:
+      summary: Get agent counts by status
+      operationId: agentStats
+      tags:
+        - Agents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Query'
+      responses:
+        '200':
+          description: Agent counts by status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentStatsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /agents/read:
+    post:
+      summary: Read a agent (non-destructive, optional blocking)
+      operationId: readAgent
+      tags:
+        - Agents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReadRequest'
+      responses:
+        '200':
+          description: Agent read successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '204':
+          description: No matching agent found
+        '408':
+          description: Request timeout (blocking read)
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /agents/take:
+    post:
+      summary: Take a agent (destructive read)
+      operationId: takeAgent
+      tags:
+        - Agents
+      parameters:
+        - name: X-Agent-ID
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Agent ID used for ownership on take
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TakeRequest'
+      responses:
+        '200':
+          description: Agent taken successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '204':
+          description: No matching agent found
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /agents/in:
+    post:
+      summary: Blocking take operation
+      operationId: inAgent
+      tags:
+        - Agents
+      parameters:
+        - name: X-Agent-ID
+          in: header
+          required: false
+          schema:
+            type: string
+          description: Agent ID used for ownership on take
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InRequest'
+      responses:
+        '200':
+          description: Agent taken successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '408':
+          description: Request timeout
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /agents/{id}/complete:
+    post:
+      summary: Mark a agent as completed
+      operationId: completeAgent
+      tags:
+        - Agents
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Agent ID
+        - name: X-Agent-ID
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Agent ID completing the agent
+        - name: X-Lease-Token
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Lease token for the agent claim
+        - name: Prefer
+          in: header
+          required: false
+          schema:
+            type: string
+            example: return=minimal
+          description: Optional response preference. Use `return=minimal` to receive 204 with no agent body.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteAgentRequest'
+      responses:
+        '200':
+          description: Agent completed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '204':
+          description: Agent completed successfully with minimal response body
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /agents/{id}/complete-and-out:
+    post:
+      summary: Complete a agent and create output agents atomically
+      operationId: completeAndOutAgent
+      tags:
+        - Agents
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Agent ID
+        - name: X-Agent-ID
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Agent ID completing the agent
+        - name: X-Lease-Token
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Lease token for the agent claim
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteAndOutRequest'
+      responses:
+        '200':
+          description: Agent completed and outputs created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompleteAndOutResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /agents/{id}/release:
+    post:
+      summary: Release ownership of a agent
+      operationId: releaseAgent
+      tags:
+        - Agents
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Agent ID
+        - name: X-Agent-ID
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Agent ID releasing the agent
+        - name: X-Lease-Token
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Lease token for the agent claim
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseRequest'
+      responses:
+        '200':
+          description: Agent released successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '403':
+          description: Forbidden - cannot release agent not owned by this agent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /agents/{id}/renew:
+    post:
+      summary: Renew lease for a agent
+      operationId: renewLease
+      tags:
+        - Agents
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Agent ID
+        - name: X-Agent-ID
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Agent ID renewing the lease
+        - name: X-Lease-Token
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Lease token for the agent claim
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RenewLeaseRequest'
+      responses:
+        '200':
+          description: Lease renewed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Agent'
+        '403':
+          description: Forbidden - cannot renew lease not owned by this agent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Agent not in correct state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /events:
+    get:
+      summary: Get events
+      operationId: getEvents
+      tags:
+        - Events
+      parameters:
+        - name: tuple_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by agent ID
+        - name: agent_id
+          in: query
+          schema:
+            type: string
+          description: Filter by agent ID
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [CREATED, CLAIMED, UPDATED, COMPLETED, FAILED, RELEASED]
+          description: Filter by event type
+        - name: trace_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by trace ID (for causal debugging)
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 1000
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Event list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Event'
+                  total:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /telemetry/spans:
+    post:
+      summary: Ingest telemetry spans
+      operationId: ingestTelemetrySpan
+      tags:
+        - Telemetry
+      description: Namespace scope is derived from the authenticated principal when auth is enabled.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelemetrySpan'
+      responses:
+        '200':
+          description: Telemetry span ingested
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ingested:
+                    type: integer
+                    description: Number of spans ingested
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    get:
+      summary: Query telemetry spans
+      operationId: listTelemetrySpans
+      tags:
+        - Telemetry
+      description: Results are namespace-scoped to the authenticated principal when auth is enabled.
+      parameters:
+        - name: trace_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Filter by trace ID
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+            maximum: 1000
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Telemetry span list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  spans:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TelemetrySpan'
+                  total:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  "/telemetry/spans:batch":
+    post:
+      summary: Ingest telemetry spans (batch)
+      operationId: ingestTelemetrySpanBatch
+      tags:
+        - Telemetry
+      description: Namespace scope is derived from the authenticated principal when auth is enabled.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelemetrySpanBatch'
+      responses:
+        '200':
+          description: Telemetry spans ingested
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ingested:
+                    type: integer
+                    description: Number of spans ingested
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /admin/shards:
+    get:
+      summary: Inspect the static shard map
+      operationId: getShardMap
+      tags:
+        - Admin
+      description: Admin-only. Writer connection details are redacted to host, port, database, and sslmode.
+      responses:
+        '200':
+          description: Shard map information
+          content:
+            application/json:
+              schema:
+                type: object
+        '403':
+          description: Admin access required
+        '501':
+          description: Not supported by the current backend
+
+  /admin/shards/health:
+    get:
+      summary: Inspect shard health
+      operationId: getShardHealth
+      tags:
+        - Admin
+      description: Admin-only operational endpoint.
+      responses:
+        '200':
+          description: Per-shard health information
+          content:
+            application/json:
+              schema:
+                type: object
+        '403':
+          description: Admin access required
+        '501':
+          description: Not supported by the current backend
+
+  /admin/shards/queues/stats:
+    get:
+      summary: Inspect queue stats for the owning shard
+      operationId: getShardQueueStats
+      tags:
+        - Admin
+      description: Admin-only operational endpoint.
+      parameters:
+        - name: namespace_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: queue
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Queue statistics for the routed shard
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          description: Admin access required
+        '501':
+          description: Not supported by the current backend
+
+  /dag/{id}:
+    get:
+      summary: Get DAG for a agent
+      operationId: getDAG
+      tags:
+        - DAG
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Root agent ID
+      responses:
+        '200':
+          description: DAG structure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DAG'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /health:
+    get:
+      summary: Health check
+      operationId: healthCheck
+      tags:
+        - System
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy, degraded, unhealthy]
+                  backend:
+                    type: string
+                    enum: [postgres, sqlite, unknown]
+                  version:
+                    type: string
+
+  /stats:
+    get:
+      summary: Get system statistics
+      operationId: getStats
+      tags:
+        - System
+      description: Admin-only operational endpoint.
+      responses:
+        '200':
+          description: System statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  agents:
+                    type: integer
+                    description: Total number of agents
+                  events:
+                    type: integer
+                    description: Total number of events
+                  agents:
+                    type: integer
+                    description: Number of active agents
+                  backend:
+                    type: string
+                    enum: [postgres, sqlite, unknown]
+        '403':
+          description: Admin access required
+
+components:
+  schemas:
+    Agent:
+      type: object
+      required:
+        - id
+        - kind
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique identifier
+        kind:
+          type: string
+          description: Type/category of the agent
+        status:
+          type: string
+          enum: [NEW, IN_PROGRESS, COMPLETED, FAILED, CANCELLED]
+          description: Current status
+        payload:
+          type: object
+          additionalProperties: true
+          description: Actual data payload
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags for filtering
+        owner:
+          type: string
+          description: Agent that owns this agent
+        parent_id:
+          type: string
+          format: uuid
+          description: Parent agent ID for DAG relationships
+        trace_id:
+          type: string
+          format: uuid
+          description: Distributed tracing ID
+        namespace_id:
+          type: string
+          description: Namespace isolation identifier enforced by server auth principal
+        shard_id:
+          type: string
+          description: Physical shard identifier for the owning backend partition
+        ttl:
+          type: integer
+          description: Time to live in seconds
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        owner_time:
+          type: string
+          format: date-time
+          description: When ownership was taken
+        lease_token:
+          type: string
+          description: Lease token for the current claim
+        lease_until:
+          type: string
+          format: date-time
+          description: Lease expiry timestamp
+        version:
+          type: integer
+          description: Monotonic agent version
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+          description: Additional metadata
+
+    CreateAgentRequest:
+      type: object
+      required:
+        - kind
+        - payload
+      properties:
+        kind:
+          type: string
+          description: Type/category of the agent
+        payload:
+          type: object
+          additionalProperties: true
+          description: Actual data payload
+        tags:
+          type: array
+          items:
+            type: string
+          description: Tags for filtering
+        parent_id:
+          type: string
+          format: uuid
+          description: Parent agent ID for DAG relationships
+        trace_id:
+          type: string
+          format: uuid
+          description: Distributed tracing ID (auto-generated if not provided)
+        namespace_id:
+          type: string
+          description: Namespace identifier (ignored unless server permits override)
+        ttl:
+          type: integer
+          description: Time to live in seconds
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+          description: Additional metadata
+        obs:
+          $ref: '#/components/schemas/TelemetryObs'
+
+    UpdateAgentRequest:
+      type: object
+      properties:
+        payload:
+          type: object
+          additionalProperties: true
+          description: Updated payload data
+        tags:
+          type: array
+          items:
+            type: string
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+        obs:
+          $ref: '#/components/schemas/TelemetryObs'
+
+    Query:
+      type: object
+      properties:
+        kind:
+          type: string
+          description: Filter by agent kind
+        status:
+          type: string
+          enum: [NEW, IN_PROGRESS, COMPLETED, FAILED, CANCELLED]
+          description: Filter by status
+        tags:
+          type: array
+          items:
+            type: string
+          description: Filter by tags (AND condition)
+        owner:
+          type: string
+          description: Filter by owner
+        parent_id:
+          type: string
+          format: uuid
+          description: Filter by parent ID
+        trace_id:
+          type: string
+          format: uuid
+          description: Filter by trace ID
+        namespace_id:
+          type: string
+          description: Namespace filter (server-enforced from auth principal when authenticated)
+        agent_id:
+          type: string
+          description: Agent ID used for ownership on take/in
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+          description: Filter by metadata (exact match)
+        limit:
+          type: integer
+          default: 100
+          maximum: 1000
+        offset:
+          type: integer
+          default: 0
+
+    TakeRequest:
+      type: object
+      properties:
+        query:
+          $ref: '#/components/schemas/Query'
+        obs:
+          $ref: '#/components/schemas/TelemetryObs'
+
+    InRequest:
+      type: object
+      required:
+        - query
+        - timeout
+      properties:
+        query:
+          $ref: '#/components/schemas/Query'
+        timeout:
+          type: integer
+          description: Timeout in seconds
+          minimum: 1
+          maximum: 300
+          default: 30
+        obs:
+          $ref: '#/components/schemas/TelemetryObs'
+
+    ReadRequest:
+      type: object
+      required:
+        - query
+      properties:
+        query:
+          $ref: '#/components/schemas/Query'
+        timeout:
+          type: integer
+          description: Timeout in seconds (blocking read only)
+          minimum: 1
+          maximum: 300
+          default: 30
+        blocking:
+          type: boolean
+          description: Whether to block until a agent is available
+          default: false
+
+    CompleteAgentRequest:
+      type: object
+      required:
+        - result
+      properties:
+        result:
+          type: object
+          additionalProperties: true
+          description: Completion result data
+        shard_id:
+          type: string
+          description: Optional shard routing hint returned from the original claim
+        obs:
+          $ref: '#/components/schemas/TelemetryObs'
+
+    CompleteAndOutRequest:
+      type: object
+      required:
+        - result
+        - outputs
+      properties:
+        result:
+          type: object
+          additionalProperties: true
+          description: Completion result data
+        shard_id:
+          type: string
+          description: Optional shard routing hint returned from the original claim
+        outputs:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateAgentRequest'
+        obs:
+          $ref: '#/components/schemas/TelemetryObs'
+
+    CompleteAndOutResponse:
+      type: object
+      required:
+        - completed
+        - created
+      properties:
+        completed:
+          $ref: '#/components/schemas/Agent'
+        created:
+          type: array
+          items:
+            $ref: '#/components/schemas/Agent'
+
+    ReleaseRequest:
+      type: object
+      properties:
+        reason:
+          type: string
+          description: Optional reason for release (e.g., "lease_expired" for reaper releases)
+          example: lease_expired
+        shard_id:
+          type: string
+          description: Optional shard routing hint returned from the original claim
+        obs:
+          $ref: '#/components/schemas/TelemetryObs'
+
+    RenewLeaseRequest:
+      type: object
+      properties:
+        lease_sec:
+          type: integer
+          description: Optional lease duration override in seconds
+        shard_id:
+          type: string
+          description: Optional shard routing hint returned from the original claim
+
+    AgentStatsResponse:
+      type: object
+      properties:
+        counts:
+          type: object
+          additionalProperties:
+            type: integer
+        total:
+          type: integer
+
+    Event:
+      type: object
+      required:
+        - id
+        - tuple_id
+        - type
+        - timestamp
+      properties:
+        id:
+          type: string
+          format: uuid
+        tuple_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [CREATED, CLAIMED, UPDATED, COMPLETED, FAILED, RELEASED]
+        timestamp:
+          type: string
+          format: date-time
+        agent_id:
+          type: string
+        data:
+          type: object
+          additionalProperties: true
+        trace_id:
+          type: string
+          format: uuid
+        version:
+          type: integer
+
+    DAG:
+      type: object
+      required:
+        - nodes
+        - edges
+      properties:
+        nodes:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/DAGNode'
+        edges:
+          type: array
+          items:
+            $ref: '#/components/schemas/Edge'
+
+    DAGNode:
+      type: object
+      required:
+        - tuple_id
+        - kind
+        - status
+        - created_at
+      properties:
+        tuple_id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+        status:
+          type: string
+          enum: [NEW, IN_PROGRESS, COMPLETED, FAILED, CANCELLED]
+        created_at:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          additionalProperties:
+            type: string
+
+    Edge:
+      type: object
+      required:
+        - from
+        - to
+        - type
+      properties:
+        from:
+          type: string
+          format: uuid
+        to:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum: [parent, spawned, depends_on]
+
+    TelemetryObs:
+      type: object
+      properties:
+        trace:
+          $ref: '#/components/schemas/TelemetryTrace'
+        treatments:
+          type: object
+          additionalProperties: true
+          description: Experiment assignments or treatment labels
+        metrics:
+          type: array
+          items:
+            $ref: '#/components/schemas/TelemetryMetric'
+        guardrails:
+          type: array
+          items:
+            $ref: '#/components/schemas/TelemetryGuardrail'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/TelemetryEvent'
+
+    TelemetryTrace:
+      type: object
+      properties:
+        trace_id:
+          type: string
+          format: uuid
+        span_id:
+          type: string
+          format: uuid
+        parent_span_id:
+          type: string
+          format: uuid
+          nullable: true
+        call_id:
+          type: string
+          description: Optional call identifier for pairing
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/TelemetryLink'
+
+    TelemetryLink:
+      type: object
+      properties:
+        span_id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          description: Link type (e.g., depends_on)
+
+    TelemetryMetric:
+      type: object
+      required:
+        - key
+      properties:
+        key:
+          type: string
+        value_bool:
+          type: boolean
+          nullable: true
+        value_num:
+          type: number
+          nullable: true
+        value_str:
+          type: string
+          nullable: true
+
+    TelemetryGuardrail:
+      type: object
+      required:
+        - rule_id
+        - hit
+      properties:
+        rule_id:
+          type: string
+        hit:
+          type: boolean
+        severity:
+          type: string
+        evidence_ref:
+          type: string
+
+    TelemetryEvent:
+      type: object
+      required:
+        - name
+        - ts_start
+      properties:
+        name:
+          type: string
+        kind:
+          type: string
+        ts_start:
+          type: string
+          format: date-time
+        ts_end:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+        attrs:
+          type: object
+          additionalProperties: true
+        span_id:
+          type: string
+          format: uuid
+        parent_span_id:
+          type: string
+          format: uuid
+          nullable: true
+
+    TelemetrySpan:
+      type: object
+      required:
+        - trace_id
+        - name
+        - ts_start
+      properties:
+        trace_id:
+          type: string
+          format: uuid
+        span_id:
+          type: string
+          format: uuid
+        parent_span_id:
+          type: string
+          format: uuid
+          nullable: true
+        tuple_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        kind:
+          type: string
+        ts_start:
+          type: string
+          format: date-time
+        ts_end:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+        attrs:
+          type: object
+          additionalProperties: true
+        metric:
+          $ref: '#/components/schemas/TelemetryMetric'
+        call_id:
+          type: string
+        links:
+          type: array
+          items:
+            $ref: '#/components/schemas/TelemetryLink'
+
+    TelemetrySpanBatch:
+      type: object
+      required:
+        - spans
+      properties:
+        spans:
+          type: array
+          items:
+            $ref: '#/components/schemas/TelemetrySpan'
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error details
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication

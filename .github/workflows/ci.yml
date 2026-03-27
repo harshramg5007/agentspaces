@@ -1,0 +1,176 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  surface_guard:
+    name: Public Surface Guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assert public surface stays trimmed
+        run: ./scripts/check_public_surface.sh
+
+  go_hardening:
+    name: Go Hardening
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: Download dependencies
+        run: go mod download
+      - name: Check gofmt
+        run: test -z "$(gofmt -l .)"
+      - name: Check go mod tidy is clean
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+      - name: Install static analysis tools
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+      - name: Run staticcheck
+        run: staticcheck ./...
+      - name: Run govulncheck
+        run: govulncheck ./...
+
+  go_unit:
+    name: Go Unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: Download dependencies
+        run: go mod download
+      - name: Build all packages
+        run: go build ./...
+      - name: Run unit and package tests
+        run: go test -race ./...
+
+  go_integration_matrix:
+    name: Go Integration Matrix
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: agents
+          POSTGRES_PASSWORD: agents
+          POSTGRES_DB: agents
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U agents"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 8
+    env:
+      RUN_INTEGRATION_TESTS: "1"
+      REQUIRE_INTEGRATION_BACKENDS: "postgres,sqlite-memory"
+      POSTGRES_HOST: "localhost"
+      POSTGRES_USER: "agents"
+      POSTGRES_PASSWORD: "agents"
+      POSTGRES_DATABASE: "agents"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+      - name: Download dependencies
+        run: go mod download
+      - name: Run contract + ordering + telemetry integration suite
+        run: |
+          go test -race -v ./pkg/storetests -run 'TestContract|TestFIFO|TestPostgresTelemetryInsert'
+          go test -race -v ./pkg/store/postgres -run 'TestIntegrationPostgresStartupPreflight'
+
+  sdk_checks:
+    name: SDK Checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install SDK build dependencies
+        run: python -m pip install --upgrade pip build
+      - name: Python syntax compile sweep
+        run: python -m compileall -q sdk/python/agent_space_sdk examples
+      - name: Install editable SDK
+        run: python -m pip install -e "sdk/python[async,dev]"
+      - name: Python import checks
+        run: |
+          python - <<'PY'
+          import agent_space_sdk
+          print("python SDK imports ok")
+          PY
+      - name: Run SDK unit tests
+        run: |
+          python -m unittest \
+            sdk/python/agent_space_sdk/tests/test_async_client_errors.py \
+            sdk/python/agent_space_sdk/tests/test_async_client_minimal_take.py \
+            sdk/python/agent_space_sdk/tests/test_complete_and_out.py
+      - name: Build Python artifacts
+        run: python -m build sdk/python --sdist --wheel --outdir dist/python
+      - name: Verify LICENSE is packaged
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import tarfile
+          import zipfile
+
+          dist = Path("dist/python")
+          wheel = next(dist.glob("*.whl"))
+          sdist = next(dist.glob("*.tar.gz"))
+
+          with zipfile.ZipFile(wheel) as zf:
+              if not any(name.endswith("LICENSE") or "/licenses/LICENSE" in name for name in zf.namelist()):
+                  raise SystemExit("wheel is missing LICENSE")
+
+          with tarfile.open(sdist, "r:gz") as tf:
+              if not any(name.endswith("/LICENSE") for name in tf.getnames()):
+                  raise SystemExit("sdist is missing LICENSE")
+          PY
+
+  docs_consistency:
+    name: Docs Consistency
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assert README shows the source-available launch surface
+        run: |
+          rg -n "source-available|BUSL-1.1|COMMERCIAL-LICENSING" README.md
+      - name: Lint markdown
+        run: make docs-lint
+      - name: Check markdown links and command paths
+        run: make docs-check
+
+  public_smoke:
+    name: Public Smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Build shared Python image
+        run: docker build -f Dockerfile.python .
+      - name: Run supported public path
+        run: |
+          make doctor
+          make up
+          make smoke
+          make down
+          make example-fault-tolerance
+      - name: Cleanup
+        if: always()
+        run: |
+          make down || true
+          docker compose -f examples/fault-tolerance/docker-compose.yml down -v --remove-orphans || true

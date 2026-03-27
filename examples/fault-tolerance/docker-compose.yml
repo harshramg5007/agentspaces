@@ -1,0 +1,113 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: agent_space
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  agent-server:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    command:
+      [
+        "./agent-server",
+        "--store-type", "postgres",
+        "--postgres-host", "postgres",
+        "--postgres-port", "5432",
+        "--postgres-user", "postgres",
+        "--postgres-password", "postgres",
+        "--postgres-database", "agent_space",
+        "--postgres-queue-claim-mode", "strict",
+        "--http-addr", ":8080"
+      ]
+    ports:
+      - "127.0.0.1:${AGENT_SPACE_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    environment:
+      - DEBUG=true
+
+  producer:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    command: ["python", "producer.py", "--server", "http://agent-server:8080/api/v1", "--tasks", "10", "--work-ms", "2000", "--ttl-sec", "120"]
+    depends_on:
+      agent-server:
+        condition: service_healthy
+    volumes:
+      - ../../sdk/python:/app/sdk/python:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  worker1:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    command: ["python", "worker.py", "--server", "http://agent-server:8080/api/v1", "--worker-id", "worker-1", "--crash-after", "1"]
+    depends_on:
+      - producer
+    volumes:
+      - ../../sdk/python:/app/sdk/python:ro
+    restart: "no"
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  worker2:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    command: ["python", "worker.py", "--server", "http://agent-server:8080/api/v1", "--worker-id", "worker-2"]
+    depends_on:
+      - producer
+    volumes:
+      - ../../sdk/python:/app/sdk/python:ro
+    restart: "no"
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  # The agent-server reaps expired leases and emits RELEASED events
+  # with reap_reason="lease_expired" from the Postgres runtime.
+
+  monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    command: ["python", "monitor.py", "--server", "http://agent-server:8080/api/v1", "--interval", "2"]
+    depends_on:
+      agent-server:
+        condition: service_healthy
+    volumes:
+      - ../../sdk/python:/app/sdk/python:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  validator:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    command: ["python", "validator.py", "--server", "http://agent-server:8080/api/v1", "--expected", "10", "--timeout", "120", "--interval", "3", "--results", "/app/output/results.json"]
+    depends_on:
+      - producer
+    volumes:
+      - ../../sdk/python:/app/sdk/python:ro
+      - validator-output:/app/output
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DEBUG=${DEBUG:-false}
+
+volumes:
+  validator-output:

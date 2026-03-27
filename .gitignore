@@ -1,0 +1,92 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+
+# Test binary, built with `go test -c`
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Go workspace file
+go.work
+
+# Dependency directories
+vendor/
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.claude/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker
+.env.local
+
+# Env files (never commit secrets)
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+*.bak
+*.zip
+*.status.json
+
+# Demo logs
+logs/
+/results/
+/bin/
+
+# Root build artifacts
+/server
+/1
+
+# Redis dump files
+*.rdb
+
+# Go profiling files
+*.prof
+
+# Generated test/verification reports
+perf_results_*
+verification_results_*
+test_report_*.md
+gosec_results.json
+
+# Generated benchmark/demo artifacts
+/results/
+demo/*/output/*
+!demo/*/output/.gitkeep
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+
+# Virtual environments
+.venv/
+.venv-smoke/
+venv/
+ENV/
+
+# Local Go build cache
+.gocache/

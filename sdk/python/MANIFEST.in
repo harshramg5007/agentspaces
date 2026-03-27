@@ -1,0 +1,4 @@
+include LICENSE
+include README.md
+graft agent_space_sdk
+global-exclude __pycache__ *.py[cod]

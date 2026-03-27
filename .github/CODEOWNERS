@@ -1,0 +1,8 @@
+* @urobora-ai/agentspaces-maintainers
+
+.github/workflows/* @urobora-ai/agentspaces-platform
+LICENSE @urobora-ai/agentspaces-maintainers @urobora-ai/agentspaces-legal
+COMMERCIAL-LICENSING.md @urobora-ai/agentspaces-maintainers @urobora-ai/agentspaces-legal
+README.md @urobora-ai/agentspaces-maintainers
+api/openapi.yaml @urobora-ai/agentspaces-platform
+sdk/python/** @urobora-ai/agentspaces-sdk
