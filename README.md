@@ -66,9 +66,6 @@ Run `make down` when you are finished, or continue with `make example-fault-tole
 | No broker dependency | Yes | No | No | No |
 | Shared queryable coordination state | Yes | Limited | Limited | No |
 
-## Why This Rides The Curve
-
-As models improve, teams add more specialized workers, more tool calls, and more routing decisions per request. That makes coordination more valuable, not less: better models create more parallel work, more retries, and more stateful handoffs to keep correct.
 
 ## Supported Surface
 
