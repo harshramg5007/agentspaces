@@ -58,6 +58,7 @@ type PostgresStore struct {
 	shardID           string
 	connString        string
 	listenerConn      *pgx.Conn
+	listenerDone      chan struct{}
 	wakeupMu          sync.RWMutex
 	wakeupCh          chan struct{}
 	deferEvents       bool
@@ -130,6 +131,7 @@ func NewPostgresStore(ctx context.Context, cfg *PostgresConfig, logger *zap.Logg
 		queueClaimMode:    queueClaimMode,
 		shardID:           cfg.ShardID,
 		connString:        connStr,
+		listenerDone:      make(chan struct{}),
 		wakeupCh:          make(chan struct{}),
 		deferEvents:       cfg.DeferEvents,
 		eventQueue:        make(chan *pendingEvent, 10000),
@@ -172,6 +174,7 @@ func (s *PostgresStore) Close() error {
 		<-s.eventDone // wait for event writer to drain
 	}
 	if s.listenerConn != nil {
+		<-s.listenerDone
 		_ = s.listenerConn.Close(context.Background())
 	}
 	s.pool.Close()

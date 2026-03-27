@@ -19,7 +19,10 @@ func (s *PostgresStore) startWakeupListener(ctx context.Context) error {
 		return fmt.Errorf("listen on %s: %w", postgresWakeupChannel, err)
 	}
 	s.listenerConn = conn
-	go s.listenForWakeups()
+	go func() {
+		defer close(s.listenerDone)
+		s.listenForWakeups()
+	}()
 	return nil
 }
 

@@ -399,7 +399,9 @@ func (s *PostgresStore) takeStrictHeadClaim(
 	agentID string,
 	lockClause string,
 ) (*takeClaimResult, error) {
-	where, args := buildWhereClauses(query, true)
+	headWhere, headArgs := buildStrictQueueHeadWhereClauses(query)
+	matchWhere, matchArgs := buildWhereClauses(query, true)
+	shiftedMatchWhere := shiftPlaceholders(matchWhere, len(headArgs))
 
 	now := time.Now().UTC()
 	leaseToken := uuid.New().String()
@@ -408,7 +410,7 @@ func (s *PostgresStore) takeStrictHeadClaim(
 		defaultLeaseMs = int64(agent.DefaultLeaseOptions().LeaseDuration / time.Millisecond)
 	}
 
-	statusArg := len(args) + 1
+	statusArg := len(headArgs) + len(matchArgs) + 1
 	ownerArg := statusArg + 1
 	nowArg := ownerArg + 1
 	leaseTokenArg := nowArg + 1
@@ -442,11 +444,12 @@ func (s *PostgresStore) takeStrictHeadClaim(
 				version = t.version + 1
 			FROM candidate
 			WHERE t.id = candidate.candidate_id
+			  AND %s
 			RETURNING %s
 		)
 		SELECT %s FROM claimed
 	`,
-		where,
+		headWhere,
 		lockClause,
 		statusArg,
 		ownerArg,
@@ -457,11 +460,13 @@ func (s *PostgresStore) takeStrictHeadClaim(
 		nowArg,
 		defaultLeaseMsArg,
 		nowArg,
+		shiftedMatchWhere,
 		agentSelectColumns,
 		agentSelectColumns,
 	)
 
-	claimArgs := append(args,
+	claimArgs := append(headArgs, matchArgs...)
+	claimArgs = append(claimArgs,
 		string(agent.StatusInProgress),
 		agentID,
 		now,

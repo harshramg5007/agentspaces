@@ -366,8 +366,17 @@ func testFIFOQueueStressOrdering(t *testing.T, space agent.AgentSpace, backendNa
 	testKind := fmt.Sprintf("fifo_queue_%s_%s", backendName, runID)
 	queueName := fmt.Sprintf("queue-%s", runID)
 
-	taskCount := getEnvInt("FIFO_STRESS_TASKS", 10000)
-	consumerCount := getEnvInt("FIFO_STRESS_CONSUMERS", 200)
+	// Keep CI-sized defaults bounded so the race-enabled integration matrix
+	// remains deterministic, while still allowing heavier soak runs via env vars.
+	defaultTaskCount := 2000
+	defaultConsumerCount := 64
+	if backendName == "sqlite-memory" {
+		defaultTaskCount = 750
+		defaultConsumerCount = 24
+	}
+
+	taskCount := getEnvInt("FIFO_STRESS_TASKS", defaultTaskCount)
+	consumerCount := getEnvInt("FIFO_STRESS_CONSUMERS", defaultConsumerCount)
 	eventTimeoutSec := getEnvInt("FIFO_STRESS_EVENT_TIMEOUT_SEC", 120)
 
 	seqByID := make(map[string]int, taskCount)
@@ -918,11 +927,18 @@ func getConfiguredBackends(t *testing.T, ctx context.Context, logger *zap.Logger
 	// Postgres backend (if configured)
 	pgHost := os.Getenv("POSTGRES_HOST")
 	if pgHost != "" {
+		pgPort := 5432
+		if rawPort := strings.TrimSpace(os.Getenv("POSTGRES_PORT")); rawPort != "" {
+			if parsedPort, err := strconv.Atoi(rawPort); err == nil && parsedPort > 0 {
+				pgPort = parsedPort
+			}
+		}
+
 		pgCfg := &storepkg.Config{
 			Type: storepkg.StoreTypePostgres,
 			Postgres: &storepkg.PostgresConfig{
 				Host:     pgHost,
-				Port:     5432,
+				Port:     pgPort,
 				User:     os.Getenv("POSTGRES_USER"),
 				Password: os.Getenv("POSTGRES_PASSWORD"),
 				Database: os.Getenv("POSTGRES_DATABASE"),

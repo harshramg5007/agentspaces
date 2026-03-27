@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
@@ -11,6 +13,8 @@ import (
 
 	"github.com/urobora-ai/agentspaces/pkg/agent"
 )
+
+var placeholderPattern = regexp.MustCompile(`\$(\d+)`)
 
 func (s *PostgresStore) In(query *agent.Query, timeout time.Duration) (*agent.Agent, error) {
 	return s.in(context.Background(), query, timeout)
@@ -260,6 +264,41 @@ func buildWhereClauses(query *agent.Query, forceStatusNew bool) (string, []inter
 	}
 
 	return strings.Join(clauses, " AND "), args
+}
+
+func buildStrictQueueHeadWhereClauses(query *agent.Query) (string, []interface{}) {
+	clauses := []string{ttlClause(), "status = $1"}
+	args := []interface{}{string(agent.StatusNew)}
+	idx := 2
+
+	if query != nil && query.NamespaceID != "" {
+		clauses = append(clauses, fmt.Sprintf("namespace_id = $%d", idx))
+		args = append(args, query.NamespaceID)
+		idx++
+	}
+
+	if query != nil && query.Metadata != nil {
+		if queue := strings.TrimSpace(query.Metadata[queueMetadataKey]); queue != "" {
+			clauses = append(clauses, fmt.Sprintf("queue = $%d", idx))
+			args = append(args, queue)
+		}
+	}
+
+	return strings.Join(clauses, " AND "), args
+}
+
+func shiftPlaceholders(clause string, offset int) string {
+	if offset == 0 || clause == "" {
+		return clause
+	}
+
+	return placeholderPattern.ReplaceAllStringFunc(clause, func(match string) string {
+		index, err := strconv.Atoi(strings.TrimPrefix(match, "$"))
+		if err != nil {
+			return match
+		}
+		return fmt.Sprintf("$%d", index+offset)
+	})
 }
 
 func ttlClause() string {

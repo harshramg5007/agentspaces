@@ -3,6 +3,7 @@ package store_test
 import (
 	"context"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -26,12 +27,18 @@ func TestPostgresTelemetryInsert(t *testing.T) {
 
 	ctx := context.Background()
 	logger := zap.NewNop()
+	pgPort := 5432
+	if rawPort := os.Getenv("POSTGRES_PORT"); rawPort != "" {
+		if parsedPort, err := strconv.Atoi(rawPort); err == nil && parsedPort > 0 {
+			pgPort = parsedPort
+		}
+	}
 
 	pgCfg := &storepkg.Config{
 		Type: storepkg.StoreTypePostgres,
 		Postgres: &storepkg.PostgresConfig{
 			Host:     os.Getenv("POSTGRES_HOST"),
-			Port:     5432,
+			Port:     pgPort,
 			User:     os.Getenv("POSTGRES_USER"),
 			Password: os.Getenv("POSTGRES_PASSWORD"),
 			Database: os.Getenv("POSTGRES_DATABASE"),
@@ -51,7 +58,7 @@ func TestPostgresTelemetryInsert(t *testing.T) {
 
 	recorder, ok := space.(interface {
 		RecordSpans(ctx context.Context, spans []telemetry.Span) error
-		ListSpans(ctx context.Context, traceID string, limit, offset int) ([]telemetry.Span, error)
+		ListSpans(ctx context.Context, traceID string, namespaceID string, limit, offset int) ([]telemetry.Span, error)
 	})
 	if !ok {
 		t.Fatalf("postgres store does not support telemetry recording")
@@ -76,7 +83,7 @@ func TestPostgresTelemetryInsert(t *testing.T) {
 		t.Fatalf("failed to record telemetry spans: %v", err)
 	}
 
-	listed, err := recorder.ListSpans(ctx, traceID, 10, 0)
+	listed, err := recorder.ListSpans(ctx, traceID, "", 10, 0)
 	if err != nil {
 		t.Fatalf("failed to list telemetry spans: %v", err)
 	}
