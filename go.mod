@@ -1,6 +1,6 @@
 module github.com/urobora-ai/agentspaces
 
-go 1.22
+go 1.25.8
 
 require (
 	github.com/goccy/go-json v0.10.6
