@@ -11,7 +11,7 @@ jobs:
     name: Public Surface Guard
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Assert public surface stays trimmed
         run: ./scripts/check_public_surface.sh
 
@@ -19,8 +19,8 @@ jobs:
     name: Go Hardening
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           go-version: "1.25.8"
       - name: Download dependencies
@@ -44,8 +44,8 @@ jobs:
     name: Go Unit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           go-version: "1.25.8"
       - name: Download dependencies
@@ -80,8 +80,8 @@ jobs:
       POSTGRES_PASSWORD: "agents"
       POSTGRES_DATABASE: "agents"
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
         with:
           go-version: "1.25.8"
       - name: Download dependencies
@@ -95,8 +95,8 @@ jobs:
     name: SDK Checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - name: Install SDK build dependencies
@@ -143,7 +143,7 @@ jobs:
     name: Docs Consistency
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Assert README shows the source-available launch surface
         run: |
           grep -nE "source-available|BUSL-1.1|COMMERCIAL-LICENSING" README.md
@@ -156,8 +156,8 @@ jobs:
     name: Public Smoke
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
       - name: Build shared Python image
