@@ -1,10 +1,16 @@
 # Agent Spaces Python SDK
 
-Launch-supported Python client for the Agent Spaces lifecycle API.
+Launch-supported Python client for the Agent Spaces coordination runtime.
 
 This SDK is distributed as part of the repository's source-available `BUSL-1.1` release.
 
-## Install
+## Install From PyPI
+
+```bash
+python3.11 -m pip install agent-space-sdk
+```
+
+## Install From This Repo
 
 ```bash
 python3.11 -m pip install -e sdk/python

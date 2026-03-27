@@ -1,6 +1,6 @@
 services:
   postgres:
-    image: public.ecr.aws/docker/library/postgres:16-alpine
+    image: public.ecr.aws/docker/library/postgres:15-alpine
     container_name: agent-postgres
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}

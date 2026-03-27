@@ -1,12 +1,15 @@
-.PHONY: help doctor up smoke down example-hello example-fault-tolerance build test run-postgres stop-postgres run-server docs-lint docs-check clean docker-up docker-down
+.PHONY: help doctor up smoke down example-hello example-fault-tolerance example-queue-fanout build test run-postgres stop-postgres run-server docs-lint docs-check clean docker-up docker-down
 
 COMPOSE := $(shell if command -v docker-compose >/dev/null 2>&1; then printf '%s' 'docker-compose'; else printf '%s' 'docker compose'; fi)
 PYTHON ?= python3.11
 SMOKE_VENV ?= .venv-smoke
+SMOKE_STAMP := $(SMOKE_VENV)/.installed
 ROOT_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 ROOT_COMPOSE_FILE := $(ROOT_DIR)/docker-compose.yml
 FAULT_TOLERANCE_DIR := $(ROOT_DIR)/examples/fault-tolerance
 FAULT_TOLERANCE_COMPOSE_FILE := $(FAULT_TOLERANCE_DIR)/docker-compose.yml
+QUEUE_FANOUT_DIR := $(ROOT_DIR)/examples/queue-fanout
+QUEUE_FANOUT_COMPOSE_FILE := $(QUEUE_FANOUT_DIR)/docker-compose.yml
 POSTGRES_HOST ?= localhost
 POSTGRES_PORT ?= 5433
 POSTGRES_USER ?= postgres
@@ -22,6 +25,7 @@ help:
 	@echo "  down                    - Stop the supported local Docker stack"
 	@echo "  example-hello           - Alias for smoke"
 	@echo "  example-fault-tolerance - Run the supported fault-tolerance example"
+	@echo "  example-queue-fanout    - Run the shared-queue 10-worker fanout example"
 	@echo "  build                   - Build the supported server binary"
 	@echo "  test                    - Run the supported Go test suite"
 	@echo "  docs-lint docs-check    - Lint and validate the public markdown surface"
@@ -44,12 +48,13 @@ doctor:
 up:
 	@$(COMPOSE) -f $(ROOT_COMPOSE_FILE) up -d --build postgres agent-server
 
-$(SMOKE_VENV)/bin/python:
-	@$(PYTHON) -m venv $(SMOKE_VENV)
+$(SMOKE_STAMP): sdk/python/setup.py sdk/python/README.md sdk/python/agent_space_sdk/__init__.py
+	@if [ ! -x $(SMOKE_VENV)/bin/python ]; then $(PYTHON) -m venv $(SMOKE_VENV); fi
 	@$(SMOKE_VENV)/bin/python -m pip install --upgrade pip
 	@$(SMOKE_VENV)/bin/python -m pip install -e sdk/python
+	@touch $(SMOKE_STAMP)
 
-smoke: $(SMOKE_VENV)/bin/python
+smoke: $(SMOKE_STAMP)
 	@AGENT_SPACE_URL=http://localhost:$${AGENT_SPACE_PORT:-8080}/api/v1 $(SMOKE_VENV)/bin/python examples/hello-world/hello_world.py
 
 down:
@@ -63,6 +68,14 @@ example-fault-tolerance:
 	$(COMPOSE) -f $(FAULT_TOLERANCE_COMPOSE_FILE) up --build --abort-on-container-exit --exit-code-from validator; \
 	status=$$?; \
 	$(COMPOSE) -f $(FAULT_TOLERANCE_COMPOSE_FILE) down -v --remove-orphans; \
+	exit $$status
+
+example-queue-fanout:
+	@cd $(QUEUE_FANOUT_DIR); \
+	set +e; \
+	$(COMPOSE) -f $(QUEUE_FANOUT_COMPOSE_FILE) up --build --scale worker=9 --abort-on-container-exit --exit-code-from validator; \
+	status=$$?; \
+	$(COMPOSE) -f $(QUEUE_FANOUT_COMPOSE_FILE) down -v --remove-orphans; \
 	exit $$status
 
 build:

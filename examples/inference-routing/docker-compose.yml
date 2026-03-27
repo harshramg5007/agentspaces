@@ -1,0 +1,96 @@
+services:
+  postgres:
+    image: public.ecr.aws/docker/library/postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: agent_space
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  agent-server:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    command:
+      [
+        "./agent-server",
+        "--store-type", "postgres",
+        "--postgres-host", "postgres",
+        "--postgres-port", "5432",
+        "--postgres-user", "postgres",
+        "--postgres-password", "postgres",
+        "--postgres-database", "agent_space",
+        "--postgres-queue-claim-mode", "strict",
+        "--http-addr", ":8080"
+      ]
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  model-chat-small:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    command:
+      [
+        "python",
+        "model_worker.py",
+        "--server", "http://agent-server:8080/api/v1",
+        "--agent-id", "model-chat-small",
+        "--model-type", "chat",
+        "--capacity", "8"
+      ]
+    depends_on:
+      agent-server:
+        condition: service_healthy
+    volumes:
+      - ../../sdk/python:/app/sdk/python:ro
+
+  model-chat-large:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    command:
+      [
+        "python",
+        "model_worker.py",
+        "--server", "http://agent-server:8080/api/v1",
+        "--agent-id", "model-chat-large",
+        "--model-type", "chat",
+        "--capacity", "32"
+      ]
+    depends_on:
+      agent-server:
+        condition: service_healthy
+    volumes:
+      - ../../sdk/python:/app/sdk/python:ro
+
+  model-reasoning:
+    build:
+      context: .
+      dockerfile: Dockerfile.python
+    command:
+      [
+        "python",
+        "model_worker.py",
+        "--server", "http://agent-server:8080/api/v1",
+        "--agent-id", "model-reasoning",
+        "--model-type", "reasoning",
+        "--capacity", "24"
+      ]
+    depends_on:
+      agent-server:
+        condition: service_healthy
+    volumes:
+      - ../../sdk/python:/app/sdk/python:ro

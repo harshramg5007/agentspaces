@@ -27,15 +27,21 @@ from agent_space_sdk import AgentSpaceClient
 from agent_space_sdk.models import Query, AgentStatus
 
 
-def get_counts(client):
+def _query(kind, status=None, queue=None, limit=1000):
+    query = Query(kind=kind, status=status, limit=limit)
+    if queue:
+        query.metadata = {"queue": str(queue)}
+    return query
+
+
+def get_counts(client, kind, queue=None):
     """Get task counts by status."""
     counts = {}
     for status in [AgentStatus.NEW, AgentStatus.IN_PROGRESS, AgentStatus.COMPLETED, AgentStatus.FAILED]:
         try:
-            query = Query(kind="fault_task", status=status, limit=1000)
-            agents = client.query_agents(query)
+            agents = client.query_agents(_query(kind, status=status, queue=queue))
             counts[status.value] = len(agents)
-        except Exception as e:
+        except Exception:
             counts[status.value] = 0
     return counts
 
@@ -48,13 +54,12 @@ def _as_utc(ts):
     return ts.astimezone(timezone.utc)
 
 
-def find_stuck_tasks(client, grace_sec: int):
+def find_stuck_tasks(client, grace_sec: int, kind: str, queue=None):
     """Find IN_PROGRESS tasks whose leases expired beyond grace."""
     stuck = []
     now = datetime.now(timezone.utc)
     try:
-        query = Query(kind="fault_task", status=AgentStatus.IN_PROGRESS, limit=1000)
-        tasks = client.query_agents(query)
+        tasks = client.query_agents(_query(kind, status=AgentStatus.IN_PROGRESS, queue=queue))
     except Exception:
         return stuck
 
@@ -89,7 +94,6 @@ def _event_has_reap_reason(event):
     """Check if an event indicates a lease was reaped."""
     data = event.data or {}
 
-    # Handle case where data might be a JSON string (shouldn't happen, but be safe)
     if isinstance(data, str):
         try:
             data = json.loads(data)
@@ -99,12 +103,10 @@ def _event_has_reap_reason(event):
             return False
 
     if isinstance(data, dict):
-        # Check direct reap_reason field (Redis server-side reaper uses this)
         if data.get("reap_reason") == "lease_expired":
             if DEBUG:
                 print(f"  [DEBUG] Event {event.id}: found reap_reason=lease_expired in data")
             return True
-        # Check nested metadata.reap_reason (Python reaper used this)
         metadata = data.get("metadata")
         if isinstance(metadata, dict) and metadata.get("reap_reason") == "lease_expired":
             if DEBUG:
@@ -116,12 +118,19 @@ def _event_has_reap_reason(event):
     return False
 
 
-def count_reaped(client):
-    """Count tasks that were reaped using event data.
+def scoped_tuple_ids(client, kind, queue=None):
+    ids = set()
+    for status in [AgentStatus.NEW, AgentStatus.IN_PROGRESS, AgentStatus.COMPLETED, AgentStatus.FAILED]:
+        try:
+            for task in client.query_agents(_query(kind, status=status, queue=queue)):
+                ids.add(str(task.id))
+        except Exception:
+            continue
+    return ids
 
-    Looks for RELEASED events with reap_reason='lease_expired' which indicates
-    the Redis server's built-in lease reaper released an expired lease.
-    """
+
+def count_reaped(client, allowed_tuple_ids=None):
+    """Count tasks that were reaped using event data."""
     reaped = set()
     try:
         for event_type in ["RELEASED", "UPDATED"]:
@@ -129,6 +138,8 @@ def count_reaped(client):
             if DEBUG:
                 print(f"[DEBUG] Checking {len(events)} {event_type} events for reap_reason")
             for event in events:
+                if allowed_tuple_ids is not None and str(event.tuple_id) not in allowed_tuple_ids:
+                    continue
                 if _event_has_reap_reason(event):
                     reaped.add(str(event.tuple_id))
                     if DEBUG:
@@ -140,6 +151,25 @@ def count_reaped(client):
     if DEBUG:
         print(f"[DEBUG] Total unique reaped agents: {len(reaped)}")
     return len(reaped)
+
+
+def completed_task_id_duplicates(client, kind, queue=None):
+    duplicates = {}
+    seen = {}
+
+    try:
+        tasks = client.query_agents(_query(kind, status=AgentStatus.COMPLETED, queue=queue))
+    except Exception:
+        return duplicates
+
+    for task in tasks:
+        task_id = str((task.payload or {}).get("task_id") or task.id)
+        seen.setdefault(task_id, []).append(str(task.id))
+
+    for task_id, tuple_ids in seen.items():
+        if len(tuple_ids) > 1:
+            duplicates[task_id] = tuple_ids
+    return duplicates
 
 
 def main():
@@ -154,19 +184,30 @@ def main():
                         help='Poll interval in seconds')
     parser.add_argument('--require-reap', action='store_true', default=True,
                         help='Require at least one reaped task')
+    parser.add_argument('--kind', default='fault_task',
+                        help='Agent kind to validate')
+    parser.add_argument('--queue', default='',
+                        help='Optional metadata.queue filter')
+    parser.add_argument('--require-unique-task-ids', action='store_true',
+                        help='Fail if duplicate payload.task_id values complete')
     parser.add_argument('--grace-sec', type=int, default=2,
                         help='Grace period past lease expiry before failing')
     parser.add_argument('--results', default='results.json',
                         help='Path to write results JSON')
     args = parser.parse_args()
 
+    queue = args.queue or None
+
     print(f"Validator connecting to {args.server}")
     print(f"Expecting {args.expected} tasks to complete within {args.timeout}s")
     print(f"Grace period: {args.grace_sec}s")
     print(f"Results file: {args.results}")
+    print(f"Kind filter: {args.kind}")
+    if queue:
+        print(f"Queue filter: {queue}")
     if args.require_reap:
         print("Requiring at least one reaped task to demonstrate fault tolerance")
-        print("  (Reaping via Redis server's built-in lease reaper)")
+        print("  (Reaping via the server lease reaper)")
     if DEBUG:
         print("DEBUG mode enabled - verbose event logging active")
     print("-" * 60)
@@ -177,12 +218,12 @@ def main():
     try:
         while True:
             elapsed = time.time() - start_time
+            counts = get_counts(client, args.kind, queue)
+            ids = scoped_tuple_ids(client, args.kind, queue)
+            reaped = count_reaped(client, ids)
+            stuck = find_stuck_tasks(client, args.grace_sec, args.kind, queue)
 
-            # Check timeout
             if elapsed > args.timeout:
-                counts = get_counts(client)
-                reaped = count_reaped(client)
-                stuck = find_stuck_tasks(client, args.grace_sec)
                 print(f"\nFAIL: Timeout after {args.timeout}s")
                 print(f"  NEW: {counts.get('NEW', 0)}")
                 print(f"  IN_PROGRESS: {counts.get('IN_PROGRESS', 0)}")
@@ -199,11 +240,6 @@ def main():
                 }
                 write_results(args.results, results)
                 sys.exit(1)
-
-            # Get current counts
-            counts = get_counts(client)
-            reaped = count_reaped(client)
-            stuck = find_stuck_tasks(client, args.grace_sec)
 
             timestamp = datetime.now().strftime('%H:%M:%S')
             print(f"[{timestamp}] NEW={counts.get('NEW', 0)} IN_PROGRESS={counts.get('IN_PROGRESS', 0)} "
@@ -226,25 +262,38 @@ def main():
                 write_results(args.results, results)
                 sys.exit(1)
 
-            # Check completion conditions
             completed = counts.get('COMPLETED', 0)
             in_progress = counts.get('IN_PROGRESS', 0)
             new_count = counts.get('NEW', 0)
             failed = counts.get('FAILED', 0)
 
             if completed >= args.expected and in_progress == 0 and new_count == 0:
-                # All tasks done
                 print("\n" + "=" * 60)
 
                 if args.require_reap and reaped == 0:
                     print("FAIL: All tasks completed but no tasks were reaped")
                     print("  This means fault tolerance was not demonstrated")
-                    print("  (worker1 should have crashed, leaving a task to be reaped)")
                     results = {
                         "status": "FAIL",
                         "reason": "no_reaped_tasks",
                         "counts": counts,
                         "reaped": reaped,
+                        "elapsed_sec": int(elapsed),
+                    }
+                    write_results(args.results, results)
+                    sys.exit(1)
+
+                duplicates = completed_task_id_duplicates(client, args.kind, queue)
+                if args.require_unique_task_ids and duplicates:
+                    print("FAIL: duplicate completed payload.task_id values found")
+                    for task_id, tuple_ids in sorted(duplicates.items()):
+                        print(f"  task_id={task_id} tuple_ids={', '.join(tuple_ids)}")
+                    results = {
+                        "status": "FAIL",
+                        "reason": "duplicate_completed_task_ids",
+                        "counts": counts,
+                        "reaped": reaped,
+                        "duplicates": duplicates,
                         "elapsed_sec": int(elapsed),
                     }
                     write_results(args.results, results)
@@ -256,6 +305,7 @@ def main():
                     "status": "PASS",
                     "counts": counts,
                     "reaped": reaped,
+                    "duplicates": duplicates if args.require_unique_task_ids else {},
                     "elapsed_sec": int(elapsed),
                 }
                 write_results(args.results, results)

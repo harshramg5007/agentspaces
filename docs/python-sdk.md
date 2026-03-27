@@ -1,8 +1,14 @@
 # Python SDK
 
-The supported Python client is the manual `agent_space_sdk` package in `sdk/python/agent_space_sdk`.
+The supported Python client is the `agent_space_sdk` package in `sdk/python/agent_space_sdk`.
 
-The SDK is distributed as part of the repository's source-available `BUSL-1.1` release.
+The preferred package name is `agent-space-sdk`. Local editable installs remain useful for contributors and example development.
+
+## Install From PyPI
+
+```bash
+python3.11 -m pip install agent-space-sdk
+```
 
 ## Install From This Repo
 
@@ -44,6 +50,7 @@ Use [`examples/hello-world/hello_world.py`](../examples/hello-world/hello_world.
 
 ## Versioning
 
+- SDK package name: `agent-space-sdk`
 - SDK package version: `1.0.0`
 - API spec version: `1.0.0`
 - Supported Python version for this launch: `3.11`

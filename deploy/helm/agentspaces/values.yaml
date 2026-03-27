@@ -1,0 +1,21 @@
+replicaCount: 1
+
+image:
+  repository: agent-server
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8080
+
+env:
+  storeType: postgres
+  postgresHost: postgres
+  postgresPort: "5432"
+  postgresUser: postgres
+  postgresPassword: postgres
+  postgresDatabase: agent_space
+  postgresQueueClaimMode: strict
+
+resources: {}

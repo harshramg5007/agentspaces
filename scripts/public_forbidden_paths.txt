@@ -1,6 +1,5 @@
 CODEOWNERS
 benchmarks
-deploy
 docker-compose.benchmark.yml
 docs/ANALYTICS.md
 docs/EVALUATION.md
@@ -10,6 +9,5 @@ experimental
 infra
 run_demos.sh
 sdk/python/README_CAUSAL.md
-sdk/python/agent_spaces_causal
 sdk/python/causal_example.py
 verification

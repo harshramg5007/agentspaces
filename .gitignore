@@ -87,6 +87,8 @@ dist/
 .venv-smoke/
 venv/
 ENV/
+node_modules/
+sdk/typescript/node_modules/
 
 # Local Go build cache
 .gocache/

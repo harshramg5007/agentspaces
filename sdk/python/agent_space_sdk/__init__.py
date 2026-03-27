@@ -15,7 +15,7 @@ except ImportError as exc:
         def __init__(self, *args, **kwargs):
             raise ImportError(
                 "aiohttp is required for AsyncAgentSpaceClient. "
-                "Install with: pip install agent-spaces[async]"
+                "Install with: pip install agent-space-sdk[async]"
             ) from exc
 from .models import (
     AgentClaim,

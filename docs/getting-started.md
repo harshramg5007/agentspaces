@@ -41,4 +41,10 @@ Run the supported recovery example:
 make example-fault-tolerance
 ```
 
-For the broader repo layout, see [../examples/README.md](../examples/README.md) and [operations.md](operations.md).
+Then fan that same queue out across 10 workers:
+
+```bash
+make example-queue-fanout
+```
+
+For the broader repo layout, see [../examples/README.md](../examples/README.md), [concepts.md](concepts.md), and [operations.md](operations.md).

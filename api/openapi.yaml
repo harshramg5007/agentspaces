@@ -3,7 +3,7 @@ info:
   title: Agent Spaces API
   description: |
     Source-available lifecycle API for Agent Spaces, a Postgres-backed coordination runtime
-    for multi-agent workflows.
+    for leased work claiming, crash recovery, and multi-agent orchestration.
   version: 1.0.0
   contact:
     name: Urobora Inc Commercial Licensing
@@ -765,7 +765,7 @@ paths:
                   events:
                     type: integer
                     description: Total number of events
-                  agents:
+                  active_agents:
                     type: integer
                     description: Number of active agents
                   backend:

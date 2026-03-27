@@ -9,16 +9,26 @@ README = Path(__file__).with_name("README.md").read_text(encoding="utf-8")
 
 
 setup(
-    name="agent-spaces",
+    name="agent-space-sdk",
     version="1.0.0",
-    author="Agent Spaces Team",
-    description="Python SDK for the Agent Spaces lifecycle API",
+    author="Urobora Inc",
+    description="Python SDK for the Agent Spaces coordination runtime",
     long_description=README,
     long_description_content_type="text/markdown",
     url="https://github.com/urobora-ai/agentspaces",
+    project_urls={
+        "Documentation": "https://github.com/urobora-ai/agentspaces/tree/main/docs",
+        "Source": "https://github.com/urobora-ai/agentspaces",
+        "Commercial Licensing": "https://github.com/urobora-ai/agentspaces/blob/main/COMMERCIAL-LICENSING.md",
+    },
     license="BUSL-1.1",
     license_files=["LICENSE"],
-    packages=find_packages(include=["agent_space_sdk", "agent_space_sdk.*"]),
+    packages=find_packages(
+        include=[
+            "agent_space_sdk",
+            "agent_space_sdk.*",
+        ]
+    ),
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
@@ -26,6 +36,13 @@ setup(
         "Topic :: System :: Distributed Computing",
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.11",
+    ],
+    keywords=[
+        "agents",
+        "coordination",
+        "multi-agent",
+        "task-queue",
+        "inference",
     ],
     python_requires=">=3.11",
     install_requires=[
@@ -38,6 +55,11 @@ setup(
         "dev": [
             "pytest>=7.0.0",
             "pytest-asyncio>=0.21.0",
+            "build>=1.2.2",
+            "twine>=5.0.0",
+        ],
+        "analytics": [
+            "psycopg[binary]>=3.1.0",
         ],
     },
 )

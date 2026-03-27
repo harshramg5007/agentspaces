@@ -11,7 +11,7 @@ jobs:
     name: Public Surface Guard
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - name: Assert public surface stays trimmed
         run: ./scripts/check_public_surface.sh
 
@@ -19,8 +19,8 @@ jobs:
     name: Go Hardening
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: "1.25.8"
       - name: Download dependencies
@@ -44,8 +44,8 @@ jobs:
     name: Go Unit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: "1.25.8"
       - name: Download dependencies
@@ -80,8 +80,8 @@ jobs:
       POSTGRES_PASSWORD: "agents"
       POSTGRES_DATABASE: "agents"
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
         with:
           go-version: "1.25.8"
       - name: Download dependencies
@@ -95,12 +95,12 @@ jobs:
     name: SDK Checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - name: Install SDK build dependencies
-        run: python -m pip install --upgrade pip build
+        run: python -m pip install --upgrade pip build twine
       - name: Python syntax compile sweep
         run: python -m compileall -q sdk/python/agent_space_sdk examples
       - name: Install editable SDK
@@ -119,6 +119,8 @@ jobs:
             sdk/python/agent_space_sdk/tests/test_complete_and_out.py
       - name: Build Python artifacts
         run: python -m build sdk/python --sdist --wheel --outdir dist/python
+      - name: Validate Python artifacts
+        run: python -m twine check dist/python/*
       - name: Verify LICENSE is packaged
         run: |
           python - <<'PY'
@@ -139,11 +141,28 @@ jobs:
                   raise SystemExit("sdist is missing LICENSE")
           PY
 
+  typescript_sdk:
+    name: TypeScript SDK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install TypeScript SDK dependencies
+        working-directory: sdk/typescript
+        run: npm install
+      - name: Regenerate OpenAPI types and build SDK
+        working-directory: sdk/typescript
+        run: |
+          npm run generate:types
+          npm run build
+
   docs_consistency:
     name: Docs Consistency
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
       - name: Assert README shows the source-available launch surface
         run: |
           grep -nE "source-available|BUSL-1.1|COMMERCIAL-LICENSING" README.md
@@ -156,8 +175,8 @@ jobs:
     name: Public Smoke
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-python@v6
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
       - name: Build shared Python image
@@ -169,8 +188,10 @@ jobs:
           make smoke
           make down
           make example-fault-tolerance
+          make example-queue-fanout
       - name: Cleanup
         if: always()
         run: |
           make down || true
           docker compose -f examples/fault-tolerance/docker-compose.yml down -v --remove-orphans || true
+          docker compose -f examples/queue-fanout/docker-compose.yml down -v --remove-orphans || true

@@ -30,6 +30,10 @@ def main():
                         help='Lease duration in seconds')
     parser.add_argument('--ttl-sec', type=int, default=None,
                         help='Agent TTL in seconds (default: derived from work/lease; 0 disables)')
+    parser.add_argument('--queue', default='',
+                        help='Optional queue name stored in metadata.queue')
+    parser.add_argument('--tag', action='append', default=[],
+                        help='Additional tag to attach to every task (repeatable)')
     args = parser.parse_args()
 
     work_sec = (args.work_ms + 999) // 1000
@@ -51,8 +55,13 @@ def main():
         metadata = {
             "lease_sec": str(args.lease_sec),
         }
+        if args.queue:
+            metadata["queue"] = str(args.queue)
         if ttl is not None:
             metadata["ttl_sec"] = str(ttl_sec)
+        tags = ["demo:fault"]
+        if args.tag:
+            tags.extend(str(tag) for tag in args.tag if str(tag).strip())
         request = CreateAgentRequest(
             kind="fault_task",
             payload={
@@ -60,7 +69,7 @@ def main():
                 "task_num": i + 1,
                 "work_ms": args.work_ms,
             },
-            tags=["demo:fault"],
+            tags=tags,
             ttl=ttl,
             metadata=metadata,
         )

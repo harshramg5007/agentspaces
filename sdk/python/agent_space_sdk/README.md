@@ -1,8 +1,14 @@
 # Agent Spaces SDK
 
-Launch-supported Python SDK for the Agent Spaces lifecycle API.
+Launch-supported Python SDK for the Agent Spaces coordination runtime.
 
-## Installation
+## Installation From PyPI
+
+```bash
+python3.11 -m pip install agent-space-sdk
+```
+
+## Installation From This Repo
 
 ```bash
 python3.11 -m pip install -e sdk/python
