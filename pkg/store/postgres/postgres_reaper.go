@@ -86,13 +86,13 @@ func (s *PostgresStore) reapExpiredLeases() {
 
 	// Collect reaped agents and emit events
 	type reapedAgent struct {
-		id       string
-		kind     string
-		traceID  string
-		oldOwner string
-		version  int64
+		id          string
+		kind        string
+		traceID     string
+		oldOwner    string
+		version     int64
 		namespaceID string
-		queue    string
+		queue       string
 	}
 	var reaped []reapedAgent
 

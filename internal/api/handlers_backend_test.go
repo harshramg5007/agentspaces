@@ -5,8 +5,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/urobora-ai/agentspaces/pkg/store"
 	"github.com/urobora-ai/agentspaces/pkg/agent"
+	"github.com/urobora-ai/agentspaces/pkg/store"
 )
 
 func TestGetBackendTypeRecognizesSupportedBackends(t *testing.T) {

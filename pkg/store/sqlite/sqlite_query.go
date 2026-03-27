@@ -8,8 +8,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/urobora-ai/agentspaces/pkg/metrics"
 	"github.com/urobora-ai/agentspaces/pkg/agent"
+	"github.com/urobora-ai/agentspaces/pkg/metrics"
 )
 
 func (s *SQLiteStore) In(query *agent.Query, timeout time.Duration) (*agent.Agent, error) {

@@ -7,8 +7,8 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/urobora-ai/agentspaces/pkg/store/internal/common"
 	"github.com/urobora-ai/agentspaces/pkg/agent"
+	"github.com/urobora-ai/agentspaces/pkg/store/internal/common"
 )
 
 func (s *PostgresStore) Subscribe(filter *agent.EventFilter, handler agent.EventHandler) error {

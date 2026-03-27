@@ -8,8 +8,8 @@ import (
 	"github.com/google/uuid"
 	"go.uber.org/zap"
 
-	"github.com/urobora-ai/agentspaces/pkg/metrics"
 	"github.com/urobora-ai/agentspaces/pkg/agent"
+	"github.com/urobora-ai/agentspaces/pkg/metrics"
 )
 
 func (s *SQLiteStore) Out(t *agent.Agent) error {

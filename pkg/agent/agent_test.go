@@ -150,26 +150,26 @@ func TestMatchesQuery(t *testing.T) {
 			query:    &Query{TraceID: "trace123"},
 			expected: true,
 		},
-			{
-				name:     "match by parent ID",
-				query:    &Query{ParentID: "parent456"},
-				expected: true,
-			},
-			{
-				name:     "match by namespace ID",
-				query:    &Query{NamespaceID: "ns-a"},
-				expected: true,
-			},
-			{
-				name:     "no match by namespace ID",
-				query:    &Query{NamespaceID: "ns-b"},
-				expected: false,
-			},
-			{
-				name:     "match by tags",
-				query:    &Query{Tags: []string{"lang:en"}},
-				expected: true,
-			},
+		{
+			name:     "match by parent ID",
+			query:    &Query{ParentID: "parent456"},
+			expected: true,
+		},
+		{
+			name:     "match by namespace ID",
+			query:    &Query{NamespaceID: "ns-a"},
+			expected: true,
+		},
+		{
+			name:     "no match by namespace ID",
+			query:    &Query{NamespaceID: "ns-b"},
+			expected: false,
+		},
+		{
+			name:     "match by tags",
+			query:    &Query{Tags: []string{"lang:en"}},
+			expected: true,
+		},
 		{
 			name:     "no match - wrong tag",
 			query:    &Query{Tags: []string{"lang:fr"}},

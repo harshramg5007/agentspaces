@@ -60,7 +60,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16-alpine
+        image: public.ecr.aws/docker/library/postgres:16-alpine
         env:
           POSTGRES_USER: agents
           POSTGRES_PASSWORD: agents
@@ -146,7 +146,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Assert README shows the source-available launch surface
         run: |
-          rg -n "source-available|BUSL-1.1|COMMERCIAL-LICENSING" README.md
+          grep -nE "source-available|BUSL-1.1|COMMERCIAL-LICENSING" README.md
       - name: Lint markdown
         run: make docs-lint
       - name: Check markdown links and command paths

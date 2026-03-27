@@ -26,8 +26,8 @@ const (
 type queuePrefetcher struct {
 	namespaceID string
 	queueName   string
-	candidates  chan string    // buffered channel of pre-fetched agent IDs
-	lastAccess  atomic.Int64  // unix nanos of last Take request
+	candidates  chan string  // buffered channel of pre-fetched agent IDs
+	lastAccess  atomic.Int64 // unix nanos of last Take request
 	cancel      context.CancelFunc
 	done        chan struct{}
 }

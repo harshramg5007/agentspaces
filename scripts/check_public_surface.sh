@@ -4,11 +4,6 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 FORBIDDEN_PATHS_FILE="$ROOT_DIR/scripts/public_forbidden_paths.txt"
 
-if ! command -v rg >/dev/null 2>&1; then
-  echo "error: rg is required" >&2
-  exit 1
-fi
-
 missing=0
 
 if [[ ! -f "$ROOT_DIR/.github/CODEOWNERS" ]]; then
@@ -59,12 +54,21 @@ common_excludes=(
   !sdk/python/LICENSE
 )
 
-if rg -n "${common_excludes[@]}" '\bMIT\b|\bAGPL\b|opensource\.org/licenses/MIT|Tuple Spaces|support@agentspace\.io|api\.agentspace\.io|experimental/|benchmarks/' "${TARGETS[@]}"; then
+scan_targets() {
+  local pattern="$1"
+  if command -v rg >/dev/null 2>&1; then
+    rg -n "${common_excludes[@]}" "$pattern" "${TARGETS[@]}"
+  else
+    grep -RInE --exclude=LICENSE "$pattern" "${TARGETS[@]}"
+  fi
+}
+
+if scan_targets '\bMIT\b|\bAGPL\b|opensource\.org/licenses/MIT|Tuple Spaces|support@agentspace\.io|api\.agentspace\.io|experimental/|benchmarks/'; then
   echo "error: forbidden public strings found" >&2
   exit 1
 fi
 
-if rg -n "${common_excludes[@]}" 'open source' "${TARGETS[@]}"; then
+if scan_targets 'open source'; then
   echo "error: 'open source' wording is not allowed outside BUSL license files" >&2
   exit 1
 fi

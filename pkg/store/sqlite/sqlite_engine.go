@@ -13,9 +13,9 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/urobora-ai/agentspaces/pkg/agent"
 	"github.com/urobora-ai/agentspaces/pkg/store/internal/common"
 	"github.com/urobora-ai/agentspaces/pkg/store/internal/core"
-	"github.com/urobora-ai/agentspaces/pkg/agent"
 )
 
 const defaultSQLitePollInterval = 100 * time.Millisecond
