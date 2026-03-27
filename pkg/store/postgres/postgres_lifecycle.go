@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -880,7 +881,7 @@ func (s *PostgresStore) CompleteAndOut(id string, agentID string, leaseToken str
 	// Validate ownership and status
 	if t.Status == agent.StatusCompleted {
 		if !completionTokenMatches(t, leaseToken) {
-			return nil, nil, fmt.Errorf(tokenMismatchStaleErr)
+			return nil, nil, errors.New(tokenMismatchStaleErr)
 		}
 		// Already completed - commit and return the existing agent
 		if err := tx.Commit(ctx); err != nil {
@@ -1227,7 +1228,7 @@ func classifyCompletionConflict(current *agent.Agent, agentID string, leaseToken
 		if completionTokenMatches(current, leaseToken) {
 			return nil
 		}
-		return fmt.Errorf(tokenMismatchStaleErr)
+		return errors.New(tokenMismatchStaleErr)
 	}
 	if current.Status != agent.StatusInProgress {
 		return fmt.Errorf("invalid status: %s", current.Status)

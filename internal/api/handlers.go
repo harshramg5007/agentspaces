@@ -1867,10 +1867,6 @@ func (h *Handlers) allowNamespaceAgentCreation(principal AuthPrincipal, namespac
 	return true, "", nil
 }
 
-func (h *Handlers) filterEventsForPrincipal(r *http.Request, events []*agent.Event) ([]*agent.Event, error) {
-	return h.filterEventsForPrincipalWithSpace(r, h.requestSpace(r), events)
-}
-
 func (h *Handlers) filterEventsForPrincipalWithSpace(r *http.Request, space agent.AgentSpace, events []*agent.Event) ([]*agent.Event, error) {
 	principal, ok := AuthPrincipalFromContext(r.Context())
 	if !ok || strings.TrimSpace(principal.NamespaceID) == "" {

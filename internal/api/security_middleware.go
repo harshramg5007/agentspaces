@@ -193,10 +193,6 @@ func isMutatingMethod(method string) bool {
 	}
 }
 
-func clientIdentifier(r *http.Request) string {
-	return clientIdentifierWithTrust(r, nil)
-}
-
 func clientIdentifierWithTrust(r *http.Request, trustedProxies []string) string {
 	remoteHost, _, _ := net.SplitHostPort(r.RemoteAddr)
 	if remoteHost == "" {

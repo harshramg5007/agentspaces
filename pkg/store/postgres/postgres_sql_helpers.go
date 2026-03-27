@@ -396,42 +396,6 @@ func updateAgentCompletionRow(ctx context.Context, tx pgx.Tx, t *agent.Agent) er
 	return err
 }
 
-func updateAgentReleaseRow(ctx context.Context, tx pgx.Tx, tupleID string, updatedAt time.Time, version int64) error {
-	_, err := tx.Exec(ctx, `
-		UPDATE agents SET
-			status=$1,
-			owner='',
-			owner_time=NULL,
-			lease_token='',
-			lease_until=NULL,
-			updated_at=$2,
-			version=$3
-		WHERE id=$4
-	`,
-		string(agent.StatusNew),
-		updatedAt.UTC(),
-		version,
-		tupleID,
-	)
-	return err
-}
-
-func updateAgentRenewLeaseRow(ctx context.Context, tx pgx.Tx, tupleID string, ownerTime time.Time, leaseUntil time.Time, updatedAt time.Time) error {
-	_, err := tx.Exec(ctx, `
-		UPDATE agents SET
-			owner_time=$1,
-			lease_until=$2,
-			updated_at=$3
-		WHERE id=$4
-	`,
-		ownerTime.UTC(),
-		leaseUntil.UTC(),
-		updatedAt.UTC(),
-		tupleID,
-	)
-	return err
-}
-
 func queueInsertEvent(batch *pgx.Batch, event *agent.Event, namespaceID string, shardID string) error {
 	dataJSON, err := json.Marshal(event.Data)
 	if err != nil {

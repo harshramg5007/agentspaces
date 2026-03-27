@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -320,7 +321,7 @@ func (s *SQLiteStore) CompleteAndGet(id string, agentID string, leaseToken strin
 
 	if t.Status == agent.StatusCompleted {
 		if !completionTokenMatches(t, leaseToken) {
-			return nil, fmt.Errorf(tokenMismatchStaleErr)
+			return nil, errors.New(tokenMismatchStaleErr)
 		}
 		if err := tx.Commit(); err != nil {
 			return nil, err
@@ -416,7 +417,7 @@ func (s *SQLiteStore) CompleteAndOut(id string, agentID string, leaseToken strin
 
 	if t.Status == agent.StatusCompleted {
 		if !completionTokenMatches(t, leaseToken) {
-			return nil, nil, fmt.Errorf(tokenMismatchStaleErr)
+			return nil, nil, errors.New(tokenMismatchStaleErr)
 		}
 		if err := tx.Commit(); err != nil {
 			return nil, nil, err

@@ -8,7 +8,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/urobora-ai/agentspaces/pkg/agent"
-	"github.com/urobora-ai/agentspaces/pkg/store/internal/common"
 )
 
 func (s *SQLiteStore) Subscribe(filter *agent.EventFilter, handler agent.EventHandler) error {
@@ -156,14 +155,6 @@ func (s *SQLiteStore) QueryEvents(query *agent.EventQuery) (*agent.EventPage, er
 
 // GetDAG returns the DAG of related agents.
 
-func (s *SQLiteStore) generateSubKey(filter *agent.EventFilter) string {
-	return common.GenerateSubKey(filter)
-}
-
 func (s *SQLiteStore) notifySubscribers(event *agent.Event) {
 	s.subscriptions.Notify(event)
-}
-
-func (s *SQLiteStore) eventMatchesFilter(event *agent.Event, subKey string) bool {
-	return common.EventMatchesFilter(event, subKey)
 }

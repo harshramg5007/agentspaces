@@ -8,7 +8,6 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/urobora-ai/agentspaces/pkg/agent"
-	"github.com/urobora-ai/agentspaces/pkg/store/internal/common"
 )
 
 func (s *PostgresStore) Subscribe(filter *agent.EventFilter, handler agent.EventHandler) error {
@@ -172,14 +171,6 @@ func (s *PostgresStore) queryEvents(ctx context.Context, query *agent.EventQuery
 
 // RecordSpans persists telemetry spans (best-effort ingestion).
 
-func (s *PostgresStore) generateSubKey(filter *agent.EventFilter) string {
-	return common.GenerateSubKey(filter)
-}
-
 func (s *PostgresStore) notifySubscribers(event *agent.Event) {
 	s.subscriptions.Notify(event)
-}
-
-func (s *PostgresStore) eventMatchesFilter(event *agent.Event, subKey string) bool {
-	return common.EventMatchesFilter(event, subKey)
 }

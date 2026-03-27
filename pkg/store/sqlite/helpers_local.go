@@ -28,7 +28,3 @@ func setCompletionMetadata(t *agent.Agent, agentID, leaseToken string, completed
 func completionTokenMatches(t *agent.Agent, leaseToken string) bool {
 	return common.CompletionTokenMatches(t, leaseToken)
 }
-
-func completionTokenRecorded(t *agent.Agent) bool {
-	return common.CompletionTokenRecorded(t)
-}
