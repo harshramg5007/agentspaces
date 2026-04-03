@@ -48,10 +48,7 @@ materialize_test_links() {
     target="$ROOT_DIR/${source#tests/go/}"
     target_dir="$(dirname "$target")"
 
-    if [[ ! -d "$target_dir" ]]; then
-      echo "error: expected package directory missing for $source" >&2
-      exit 1
-    fi
+    mkdir -p "$target_dir"
 
     expected="$(relative_path "$target_dir" "$ROOT_DIR/$source")"
 
@@ -82,4 +79,9 @@ materialize_test_links() {
 
 cd "$ROOT_DIR"
 materialize_test_links
-"$GO_BIN" test -v -race ./...
+
+if [[ "$#" -eq 0 ]]; then
+  set -- ./...
+fi
+
+"$GO_BIN" test -v -race "$@"

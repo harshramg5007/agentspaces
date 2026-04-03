@@ -53,7 +53,7 @@ jobs:
       - name: Build all packages
         run: go build ./...
       - name: Run unit and package tests
-        run: go test -race ./...
+        run: ./scripts/run_go_tests.sh
 
   go_integration_matrix:
     name: Go Integration Matrix
@@ -88,8 +88,8 @@ jobs:
         run: go mod download
       - name: Run contract + ordering + telemetry integration suite
         run: |
-          go test -race -v ./pkg/storetests -run 'TestContract|TestFIFO|TestPostgresTelemetryInsert'
-          go test -race -v ./pkg/store/postgres -run 'TestIntegrationPostgresStartupPreflight'
+          ./scripts/run_go_tests.sh ./pkg/storetests -run 'TestContract|TestFIFO|TestPostgresTelemetryInsert'
+          ./scripts/run_go_tests.sh ./pkg/store/postgres -run 'TestIntegrationPostgresStartupPreflight'
 
   sdk_checks:
     name: SDK Checks
@@ -112,11 +112,7 @@ jobs:
           print("python SDK imports ok")
           PY
       - name: Run SDK unit tests
-        run: |
-          python -m unittest \
-            sdk/python/agent_space_sdk/tests/test_async_client_errors.py \
-            sdk/python/agent_space_sdk/tests/test_async_client_minimal_take.py \
-            sdk/python/agent_space_sdk/tests/test_complete_and_out.py
+        run: make test-python
       - name: Build Python artifacts
         run: python -m build sdk/python --sdist --wheel --outdir dist/python
       - name: Validate Python artifacts
