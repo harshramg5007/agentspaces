@@ -9,7 +9,7 @@ Contributions should preserve the supported public boundary:
 
 ## External Contributions
 
-External pull requests are closed for the initial source-available launch. Contributor terms are not yet published, so outside contributions are not being accepted until that policy is in place.
+External pull requests are not being accepted right now. If that policy changes, this document will be updated.
 
 ## Workflow
 

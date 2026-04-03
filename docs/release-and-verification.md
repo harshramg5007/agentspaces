@@ -6,7 +6,7 @@ The public release surface is intentionally narrower than the private developmen
 
 - `scripts/check_public_surface.sh`
 - `go build ./...`
-- `go test -race ./...`
+- `make test`
 - `python3.11 -m build sdk/python`
 - Supported README commands succeed in CI
 - `make doctor && make up && make smoke && make down`
@@ -24,4 +24,4 @@ Release gates cover:
 ## Artifacts
 
 - GitHub tag releases publish server binaries and Python build artifacts
-- Python wheel and sdist artifacts must include the BUSL license file
+- Python wheel and sdist artifacts must include the AGPL license file

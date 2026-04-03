@@ -5,7 +5,7 @@
 Agent Spaces gives agent systems a shared coordination runtime for posting work, claiming it with leases, routing by capability, and recovering cleanly from worker crashes.
 Use it when queues are too narrow and workflow engines are too rigid: you need shared queryable state, atomic claims, and traceable multi-agent handoffs in one system.
 
-Agent Spaces is source-available under the Business Source License 1.1 (`BUSL-1.1`). Evaluation, CI, and other non-production use are allowed under BUSL. Production use requires a commercial license. See [LICENSE](LICENSE) and [COMMERCIAL-LICENSING.md](COMMERCIAL-LICENSING.md).
+Agent Spaces is licensed under the GNU Affero General Public License v3.0 only (`AGPL-3.0-only`). See [LICENSE](LICENSE).
 
 [Quickstart](docs/getting-started.md) | [Concepts](docs/concepts.md) | [Python SDK](docs/python-sdk.md) | [TypeScript SDK](sdk/typescript/README.md) | [Examples](examples/README.md) | [Architecture](docs/architecture.md) | [Observability](docs/observability.md) | [Discussions](https://github.com/urobora-ai/agentspaces/discussions)
 
@@ -119,4 +119,4 @@ Use [GitHub Discussions](https://github.com/urobora-ai/agentspaces/discussions) 
 
 ## License
 
-Agent Spaces is source-available under `BUSL-1.1`, with `Additional Use Grant: None` and `Change License: MPL-2.0` on `2030-03-27`. Commercial licensing: `jase@urobora.ai`.
+Agent Spaces is licensed under `AGPL-3.0-only`. See [LICENSE](LICENSE).

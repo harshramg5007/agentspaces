@@ -1,4 +1,4 @@
-.PHONY: help doctor up smoke down example-hello example-fault-tolerance example-queue-fanout build test run-postgres stop-postgres run-server docs-lint docs-check clean docker-up docker-down
+.PHONY: help doctor up smoke down example-hello example-fault-tolerance example-queue-fanout build test test-python test-all run-postgres stop-postgres run-server docs-lint docs-check clean docker-up docker-down
 
 COMPOSE := $(shell if command -v docker-compose >/dev/null 2>&1; then printf '%s' 'docker-compose'; else printf '%s' 'docker compose'; fi)
 PYTHON ?= python3.11
@@ -27,7 +27,9 @@ help:
 	@echo "  example-fault-tolerance - Run the supported fault-tolerance example"
 	@echo "  example-queue-fanout    - Run the shared-queue 10-worker fanout example"
 	@echo "  build                   - Build the supported server binary"
-	@echo "  test                    - Run the supported Go test suite"
+	@echo "  test                    - Run the supported Go test suite via temporary test links"
+	@echo "  test-python             - Run the relocated Python SDK test suite"
+	@echo "  test-all                - Run the Go and Python test suites"
 	@echo "  docs-lint docs-check    - Lint and validate the public markdown surface"
 	@echo "  run-postgres run-server - Run the supported server against local Postgres"
 	@echo "  clean                   - Remove local build artifacts and stop containers"
@@ -82,7 +84,12 @@ build:
 	go build -o bin/agent-server ./cmd/server
 
 test:
-	go test -v -race ./...
+	./scripts/run_go_tests.sh
+
+test-python:
+	PYTHONPATH=sdk/python $(PYTHON) -m unittest discover -s tests/python/sdk/python/agent_space_sdk/tests -p 'test_*.py'
+
+test-all: test test-python
 
 run-postgres:
 	@$(COMPOSE) -f $(ROOT_COMPOSE_FILE) up -d postgres

@@ -2,7 +2,7 @@
 
 Launch-supported Python client for the Agent Spaces coordination runtime.
 
-This SDK is distributed as part of the repository's source-available `BUSL-1.1` release.
+This SDK is distributed under the repository's `AGPL-3.0-only` license.
 
 ## Install From PyPI
 

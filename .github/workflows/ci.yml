@@ -163,9 +163,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Assert README shows the source-available launch surface
+      - name: Assert README shows the AGPL license surface
         run: |
-          grep -nE "source-available|BUSL-1.1|COMMERCIAL-LICENSING" README.md
+          grep -nE "AGPL-3.0-only|GNU Affero General Public License" README.md
       - name: Lint markdown
         run: make docs-lint
       - name: Check markdown links and command paths

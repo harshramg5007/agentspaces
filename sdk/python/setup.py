@@ -19,9 +19,9 @@ setup(
     project_urls={
         "Documentation": "https://github.com/urobora-ai/agentspaces/tree/main/docs",
         "Source": "https://github.com/urobora-ai/agentspaces",
-        "Commercial Licensing": "https://github.com/urobora-ai/agentspaces/blob/main/COMMERCIAL-LICENSING.md",
+        "License": "https://www.gnu.org/licenses/agpl-3.0.html",
     },
-    license="BUSL-1.1",
+    license="AGPL-3.0-only",
     license_files=["LICENSE"],
     packages=find_packages(
         include=[

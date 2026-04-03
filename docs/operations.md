@@ -25,4 +25,4 @@ make down
 
 ## Deployment Boundary
 
-The supported deployment story in this repository is the Postgres local Docker path. SQLite remains local-only and non-production. Hosted services, OEM redistribution, MSP operation, and any other production use require a commercial license under the repository's BUSL terms.
+The supported deployment story in this repository is the Postgres local Docker path. SQLite remains local-only and non-production. Hosted services, OEM redistribution, MSP operation, and other production topologies are outside the supported documentation surface in this repository.

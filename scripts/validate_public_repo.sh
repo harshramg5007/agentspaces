@@ -37,7 +37,7 @@ PY
   go mod tidy
   git diff --exit-code go.mod go.sum
   go build ./...
-  go test -race ./...
+  make test
   "$PYTHON_BIN" -m pip install --upgrade pip build
   "$PYTHON_BIN" -m pip install -e "sdk/python[async,dev]"
   "$PYTHON_BIN" -m build sdk/python --sdist --wheel --outdir "$DIST_DIR"

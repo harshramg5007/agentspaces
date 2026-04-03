@@ -2,14 +2,15 @@ openapi: 3.0.3
 info:
   title: Agent Spaces API
   description: |
-    Source-available lifecycle API for Agent Spaces, a Postgres-backed coordination runtime
+    Lifecycle API for Agent Spaces, a Postgres-backed coordination runtime
     for leased work claiming, crash recovery, and multi-agent orchestration.
   version: 1.0.0
   contact:
-    name: Urobora Inc Commercial Licensing
+    name: Urobora Inc
     email: jase@urobora.ai
   license:
-    name: Business Source License 1.1
+    name: GNU Affero General Public License v3.0 only
+    url: https://www.gnu.org/licenses/agpl-3.0.html
 
 servers:
   - url: http://localhost:8080/api/v1

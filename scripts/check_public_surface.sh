@@ -35,7 +35,6 @@ TARGETS=(
   CHANGELOG.md
   CONTRIBUTING.md
   SECURITY.md
-  COMMERCIAL-LICENSING.md
   api
   docs
   examples
@@ -63,13 +62,8 @@ scan_targets() {
   fi
 }
 
-if scan_targets '\bMIT\b|\bAGPL\b|opensource\.org/licenses/MIT|Tuple Spaces|support@agentspace\.io|api\.agentspace\.io|experimental/|benchmarks/'; then
+if scan_targets '\bMIT\b|opensource\.org/licenses/MIT|Tuple Spaces|support@agentspace\.io|api\.agentspace\.io|experimental/|benchmarks/|\bBUSL\b|Business Source License|source-available|commercial licensing|commercial license|Additional Use Grant|Change License|MPL-2.0'; then
   echo "error: forbidden public strings found" >&2
-  exit 1
-fi
-
-if scan_targets 'open source'; then
-  echo "error: 'open source' wording is not allowed outside BUSL license files" >&2
   exit 1
 fi
 
