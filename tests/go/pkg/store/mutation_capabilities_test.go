@@ -10,4 +10,8 @@ var (
 	_ agent.UpdateAndGetProvider   = (*SQLiteStore)(nil)
 	_ agent.CompleteAndGetProvider = (*SQLiteStore)(nil)
 	_ agent.ReleaseAndGetProvider  = (*SQLiteStore)(nil)
+
+	_ agent.UpdateAndGetProvider   = (*ValkeyStore)(nil)
+	_ agent.CompleteAndGetProvider = (*ValkeyStore)(nil)
+	_ agent.ReleaseAndGetProvider  = (*ValkeyStore)(nil)
 )

@@ -18,7 +18,7 @@ import (
 	"github.com/urobora-ai/agentspaces/pkg/agent"
 	"github.com/urobora-ai/agentspaces/pkg/metrics"
 	"github.com/urobora-ai/agentspaces/pkg/store"
-	postgressharded "github.com/urobora-ai/agentspaces/pkg/store/postgressharded"
+	"github.com/urobora-ai/agentspaces/pkg/store/shardadmin"
 	"github.com/urobora-ai/agentspaces/pkg/telemetry"
 )
 
@@ -70,7 +70,7 @@ type shardMapInfoProvider interface {
 }
 
 type shardHealthInfoProvider interface {
-	ShardHealthInfo(ctx context.Context) ([]postgressharded.ShardHealth, error)
+	ShardHealthInfo(ctx context.Context) ([]shardadmin.ShardHealth, error)
 }
 
 type shardQueueStatsProvider interface {
@@ -1958,7 +1958,9 @@ func (h *Handlers) getBackendType() string {
 	case *store.PostgresStore:
 		return string(store.StoreTypePostgres)
 	case *store.PostgresShardedStore:
-		return string(store.StoreTypePostgres)
+		return string(store.StoreTypePostgresSharded)
+	case *store.ValkeyStore:
+		return string(store.StoreTypeValkey)
 	case *store.SQLiteStore:
 		return "sqlite"
 	default:

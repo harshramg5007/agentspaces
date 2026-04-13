@@ -15,6 +15,7 @@ import (
 	"github.com/urobora-ai/agentspaces/pkg/agent"
 	"github.com/urobora-ai/agentspaces/pkg/store/internal/common"
 	postgresbackend "github.com/urobora-ai/agentspaces/pkg/store/postgres"
+	"github.com/urobora-ai/agentspaces/pkg/store/shardadmin"
 	"github.com/urobora-ai/agentspaces/pkg/telemetry"
 )
 
@@ -801,14 +802,6 @@ type ShardSummary struct {
 	WriterEndpoint string `json:"writer_endpoint"`
 }
 
-type ShardHealth struct {
-	ShardID       string `json:"shard_id"`
-	OwnerNodeID   string `json:"owner_node_id,omitempty"`
-	AdvertiseAddr string `json:"advertise_addr,omitempty"`
-	Ready         bool   `json:"ready"`
-	Error         string `json:"error,omitempty"`
-}
-
 func (s *PostgresShardedStore) ShardMapInfo(ctx context.Context) (map[string]interface{}, error) {
 	summaries := make([]ShardSummary, 0, len(s.shards))
 	for _, shard := range s.shards {
@@ -828,11 +821,11 @@ func (s *PostgresShardedStore) ShardMapInfo(ctx context.Context) (map[string]int
 	}, nil
 }
 
-func (s *PostgresShardedStore) ShardHealthInfo(ctx context.Context) ([]ShardHealth, error) {
-	out := make([]ShardHealth, 0, len(s.shards))
+func (s *PostgresShardedStore) ShardHealthInfo(ctx context.Context) ([]shardadmin.ShardHealth, error) {
+	out := make([]shardadmin.ShardHealth, 0, len(s.shards))
 	for _, shard := range s.shards {
 		err := shard.store.Health(ctx)
-		out = append(out, ShardHealth{
+		out = append(out, shardadmin.ShardHealth{
 			ShardID:       shard.spec.ShardID,
 			OwnerNodeID:   shard.spec.OwnerNodeID,
 			AdvertiseAddr: shard.spec.AdvertiseAddr,

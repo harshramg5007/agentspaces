@@ -16,6 +16,19 @@ services:
       timeout: 3s
       retries: 5
 
+  valkey:
+    image: valkey/valkey:8-alpine
+    container_name: agent-valkey
+    profiles: ["valkey"]
+    command: ["valkey-server", "--save", "", "--appendonly", "no"]
+    ports:
+      - "127.0.0.1:${VALKEY_HOST_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   agent-server:
     build:
       context: .

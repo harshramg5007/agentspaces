@@ -40,7 +40,7 @@ type httpRuntimeOptions struct {
 
 type telemetryCapability interface {
 	RecordSpans(ctx context.Context, spans []telemetry.Span) error
-	ListSpans(ctx context.Context, traceID string, limit, offset int) ([]telemetry.Span, error)
+	ListSpans(ctx context.Context, traceID string, namespaceID string, limit, offset int) ([]telemetry.Span, error)
 }
 
 type telemetryRetentionStore interface {
@@ -61,7 +61,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is ./config.yaml)")
 	rootCmd.PersistentFlags().String("runtime-profile", "dev", "Runtime profile (dev, production, benchmark)")
-	rootCmd.PersistentFlags().String("store-type", "postgres", "Storage backend type (postgres, postgres-sharded, sqlite-file, sqlite-memory)")
+	rootCmd.PersistentFlags().String("store-type", "postgres", "Storage backend type (postgres, postgres-sharded, sqlite-file, sqlite-memory, valkey)")
 	rootCmd.PersistentFlags().String("postgres-host", "localhost", "PostgreSQL host")
 	rootCmd.PersistentFlags().Int("postgres-port", 5432, "PostgreSQL port")
 	rootCmd.PersistentFlags().String("postgres-user", "postgres", "PostgreSQL user")
@@ -82,6 +82,14 @@ func init() {
 	rootCmd.PersistentFlags().String("sqlite-journal-mode", "WAL", "SQLite journal mode (WAL, DELETE, TRUNCATE, etc.)")
 	rootCmd.PersistentFlags().String("sqlite-synchronous", "NORMAL", "SQLite synchronous mode (OFF, NORMAL, FULL)")
 	rootCmd.PersistentFlags().Int("sqlite-cache-kb", 16384, "SQLite cache size in KB")
+	rootCmd.PersistentFlags().String("valkey-addr", "localhost:6379", "Valkey address for single-node mode")
+	rootCmd.PersistentFlags().String("valkey-shards", "", "Comma-separated Valkey shard addresses")
+	rootCmd.PersistentFlags().String("valkey-shard-map-file", "", "Static shard map file for owner-routed Valkey runtime")
+	rootCmd.PersistentFlags().String("valkey-node-id", "", "Node identity for owner-routed Valkey runtime")
+	rootCmd.PersistentFlags().String("valkey-advertise-addr", "", "Advertised HTTP address for owner-routed Valkey runtime")
+	rootCmd.PersistentFlags().Bool("valkey-publish-pubsub", false, "Enable best-effort Valkey pub/sub wakeups")
+	rootCmd.PersistentFlags().String("valkey-lease-reap-interval", "1s", "Valkey lease reap interval")
+	rootCmd.PersistentFlags().Int("valkey-lease-reap-batch", 200, "Valkey lease reap batch size")
 	rootCmd.Flags().String("http-addr", "127.0.0.1:8080", "HTTP server address")
 	rootCmd.Flags().String("api-key", "", "API key for authentication (empty for no auth)")
 	rootCmd.Flags().String("auth-keys-file", "", "Path to JSON file containing namespace-bound API keys")
@@ -143,6 +151,14 @@ func init() {
 	viper.BindPFlag("sqlite.journal_mode", rootCmd.PersistentFlags().Lookup("sqlite-journal-mode"))
 	viper.BindPFlag("sqlite.synchronous", rootCmd.PersistentFlags().Lookup("sqlite-synchronous"))
 	viper.BindPFlag("sqlite.cache_kb", rootCmd.PersistentFlags().Lookup("sqlite-cache-kb"))
+	viper.BindPFlag("valkey.addr", rootCmd.PersistentFlags().Lookup("valkey-addr"))
+	viper.BindPFlag("valkey.shards", rootCmd.PersistentFlags().Lookup("valkey-shards"))
+	viper.BindPFlag("valkey.shard_map_file", rootCmd.PersistentFlags().Lookup("valkey-shard-map-file"))
+	viper.BindPFlag("valkey.node_id", rootCmd.PersistentFlags().Lookup("valkey-node-id"))
+	viper.BindPFlag("valkey.advertise_addr", rootCmd.PersistentFlags().Lookup("valkey-advertise-addr"))
+	viper.BindPFlag("valkey.publish_pubsub", rootCmd.PersistentFlags().Lookup("valkey-publish-pubsub"))
+	viper.BindPFlag("valkey.lease_reap_interval", rootCmd.PersistentFlags().Lookup("valkey-lease-reap-interval"))
+	viper.BindPFlag("valkey.lease_reap_batch", rootCmd.PersistentFlags().Lookup("valkey-lease-reap-batch"))
 	viper.BindPFlag("http.addr", rootCmd.Flags().Lookup("http-addr"))
 	viper.BindPFlag("api.key", rootCmd.Flags().Lookup("api-key"))
 	viper.BindPFlag("auth.keys_file", rootCmd.Flags().Lookup("auth-keys-file"))
@@ -237,6 +253,14 @@ func initConfig() {
 	viper.BindEnv("sqlite.journal_mode", "SQLITE_JOURNAL_MODE")
 	viper.BindEnv("sqlite.synchronous", "SQLITE_SYNCHRONOUS")
 	viper.BindEnv("sqlite.cache_kb", "SQLITE_CACHE_KB")
+	viper.BindEnv("valkey.addr", "VALKEY_ADDR")
+	viper.BindEnv("valkey.shards", "VALKEY_SHARDS")
+	viper.BindEnv("valkey.shard_map_file", "VALKEY_SHARD_MAP_FILE")
+	viper.BindEnv("valkey.node_id", "VALKEY_NODE_ID")
+	viper.BindEnv("valkey.advertise_addr", "VALKEY_ADVERTISE_ADDR")
+	viper.BindEnv("valkey.publish_pubsub", "VALKEY_PUBLISH_PUBSUB")
+	viper.BindEnv("valkey.lease_reap_interval", "VALKEY_LEASE_REAP_INTERVAL")
+	viper.BindEnv("valkey.lease_reap_batch", "VALKEY_LEASE_REAP_BATCH")
 	viper.BindEnv("http.addr", "HTTP_ADDR")
 	viper.BindEnv("api.key", "API_KEY")
 	viper.BindEnv("auth.keys_file", "AUTH_KEYS_FILE")
@@ -417,6 +441,22 @@ func sqliteConfigFromViper(storeType store.StoreType) *sqlitebackend.SQLiteConfi
 	return cfg
 }
 
+func valkeyConfigFromViper() *store.ValkeyConfig {
+	return &store.ValkeyConfig{
+		Addr:              viper.GetString("valkey.addr"),
+		Shards:            splitCommaListDedup(viper.GetString("valkey.shards")),
+		ShardMapFile:      viper.GetString("valkey.shard_map_file"),
+		NodeID:            viper.GetString("valkey.node_id"),
+		AdvertiseAddr:     viper.GetString("valkey.advertise_addr"),
+		PublishPubSub:     viper.GetBool("valkey.publish_pubsub"),
+		LeaseReapInterval: viper.GetString("valkey.lease_reap_interval"),
+		LeaseReapBatch:    viper.GetInt("valkey.lease_reap_batch"),
+		SlimEvents:        viper.GetBool("events.slim"),
+		DeferEvents:       viper.GetBool("events.defer"),
+		EventBatchSize:    viper.GetInt("events.batch_size"),
+	}
+}
+
 func splitCommaList(value string) []string {
 	if strings.TrimSpace(value) == "" {
 		return nil
@@ -584,6 +624,7 @@ func runServer(cmd *cobra.Command, args []string) {
 			cfg.CacheSizeKB = viper.GetInt("sqlite.cache_kb")
 			return cfg
 		}(),
+		Valkey: valkeyConfigFromViper(),
 	}
 
 	// Create agent space

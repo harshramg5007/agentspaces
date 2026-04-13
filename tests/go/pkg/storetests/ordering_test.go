@@ -356,6 +356,23 @@ func TestFIFO_QueueHeadKindMismatchDoesNotBypassPostgresStrictQueueHead(t *testi
 	testQueueHeadKindMismatchDoesNotBypass(t, space)
 }
 
+func TestFIFO_QueueHeadKindMismatchDoesNotBypassValkeyStrictQueueHead(t *testing.T) {
+	if os.Getenv("RUN_INTEGRATION_TESTS") != "1" {
+		t.Skip("Skipping integration test. Set RUN_INTEGRATION_TESTS=1 to run.")
+	}
+
+	ctx := context.Background()
+	logger := zap.NewNop()
+
+	backends := getConfiguredBackends(t, ctx, logger)
+	space, ok := backends["valkey"]
+	if !ok {
+		t.Skip("Skipping Valkey queue-head test: Valkey backend is not configured")
+	}
+
+	testQueueHeadKindMismatchDoesNotBypass(t, space)
+}
+
 type claimEvent struct {
 	timestamp time.Time
 	sequence  int
@@ -954,6 +971,15 @@ func getConfiguredBackends(t *testing.T, ctx context.Context, logger *zap.Logger
 		}
 	}
 
+	if valkeyCfg := valkeyConfigFromEnv(); valkeyCfg != nil {
+		valkeyStore, err := storepkg.NewStore(ctx, valkeyCfg, logger)
+		if err != nil {
+			t.Logf("Skipping Valkey backend: %v", err)
+		} else {
+			backends["valkey"] = valkeyStore
+		}
+	}
+
 	if len(backends) == 0 {
 		t.Skip("No backends available for testing")
 	}
@@ -964,6 +990,29 @@ func getConfiguredBackends(t *testing.T, ctx context.Context, logger *zap.Logger
 	}
 
 	return backends
+}
+
+func valkeyConfigFromEnv() *storepkg.Config {
+	addr := strings.TrimSpace(os.Getenv("VALKEY_ADDR"))
+	shards := splitCSV(os.Getenv("VALKEY_SHARDS"))
+	if addr == "" && len(shards) == 0 {
+		return nil
+	}
+
+	cfg := &storepkg.Config{
+		Type: storepkg.StoreTypeValkey,
+		Valkey: &storepkg.ValkeyConfig{
+			Addr:              addr,
+			Shards:            shards,
+			PublishPubSub:     false,
+			LeaseReapInterval: "1s",
+			LeaseReapBatch:    200,
+		},
+	}
+	if cfg.Valkey.Addr == "" {
+		cfg.Valkey.Addr = storepkg.DefaultValkeyConfig().Addr
+	}
+	return cfg
 }
 
 func requiredBackends() map[string]struct{} {
@@ -991,7 +1040,30 @@ func normalizeBackendName(value string) string {
 		return "sqlite-memory"
 	case "sqlite-file", "sqlite_file":
 		return "sqlite-file"
+	case "valkey", "redis":
+		return "valkey"
 	default:
 		return name
 	}
+}
+
+func splitCSV(value string) []string {
+	if strings.TrimSpace(value) == "" {
+		return nil
+	}
+	parts := strings.Split(value, ",")
+	seen := make(map[string]struct{}, len(parts))
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed == "" {
+			continue
+		}
+		if _, ok := seen[trimmed]; ok {
+			continue
+		}
+		seen[trimmed] = struct{}{}
+		out = append(out, trimmed)
+	}
+	return out
 }

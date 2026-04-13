@@ -76,6 +76,7 @@ Run `make down` when you are finished, or continue with `make example-fault-tole
 | Python SDK (`sdk/python/agent_space_sdk`) | supported | `pip install agent-space-sdk`, sync + async clients |
 | TypeScript SDK (`sdk/typescript`) | preview | Generated from OpenAPI with a thin fetch wrapper |
 | Postgres runtime | supported | Queue-partitioned, strict claim mode by default |
+| Valkey runtime | experimental | Single-node or sharded backend; telemetry and shard admin supported, but not the default local path |
 | Local Docker path | supported | `make up`, `make smoke`, `make down` on Postgres |
 | SQLite runtime | experimental | Local-only; not recommended for pilot or production deployments |
 | Hello World example | supported | [`examples/hello-world`](examples/hello-world/README.md) |
@@ -107,7 +108,7 @@ Run `make down` when you are finished, or continue with `make example-fault-tole
 
 ## Architecture
 
-The runtime is a small HTTP server over a Postgres-backed coordination service, with Python and TypeScript SDKs and runnable examples built on top. See [docs/architecture.md](docs/architecture.md) for the supported component model and deployment shape.
+The runtime is a small HTTP server over a pluggable coordination store, with Postgres as the supported default and Valkey available as an experimental backend. See [docs/architecture.md](docs/architecture.md) for the supported component model and deployment shape.
 
 ## Operations
 

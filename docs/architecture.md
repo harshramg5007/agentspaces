@@ -16,6 +16,7 @@ Agent Spaces has three supported layers:
 ## Supported Backends
 
 - Postgres: supported runtime backend with strict queue claim mode by default
+- Valkey: experimental backend with single-node and sharded modes, persisted telemetry, and shard-admin surfaces
 - SQLite: local-only backend for non-production workflows
 
 ## Supported Examples

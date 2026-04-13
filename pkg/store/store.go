@@ -18,6 +18,7 @@ const (
 	StoreTypePostgresSharded StoreType = "postgres-sharded"
 	StoreTypeSQLite          StoreType = "sqlite-file"
 	StoreTypeSQLiteMem       StoreType = "sqlite-memory"
+	StoreTypeValkey          StoreType = "valkey"
 )
 
 // Config holds store configuration
@@ -26,6 +27,7 @@ type Config struct {
 	Postgres        *PostgresConfig
 	PostgresSharded *PostgresShardedConfig
 	SQLite          *SQLiteConfig
+	Valkey          *ValkeyConfig
 }
 
 // PostgresConfig holds PostgreSQL-specific configuration
@@ -70,6 +72,21 @@ type PostgresShardedConfig struct {
 	PrefetchBatchSize     int    `json:"prefetch_batch_size"`
 }
 
+// ValkeyConfig holds Valkey-specific configuration.
+type ValkeyConfig struct {
+	Addr              string   `json:"addr"`
+	Shards            []string `json:"shards"`
+	PublishPubSub     bool     `json:"publish_pubsub"`
+	LeaseReapInterval string   `json:"lease_reap_interval"`
+	LeaseReapBatch    int      `json:"lease_reap_batch"`
+	SlimEvents        bool     `json:"slim_events"`
+	DeferEvents       bool     `json:"defer_events"`
+	EventBatchSize    int      `json:"event_batch_size"`
+	ShardMapFile      string   `json:"shard_map_file"`
+	NodeID            string   `json:"node_id"`
+	AdvertiseAddr     string   `json:"advertise_addr"`
+}
+
 // NewStore creates a new store based on the configuration
 func NewStore(ctx context.Context, cfg *Config, logger *zap.Logger) (agent.AgentSpace, error) {
 	if cfg == nil {
@@ -96,9 +113,15 @@ func NewStore(ctx context.Context, cfg *Config, logger *zap.Logger) (agent.Agent
 			sqliteCfg.InMemory = true
 		}
 		return NewSQLiteStore(ctx, sqliteCfg, logger)
+	case StoreTypeValkey:
+		valkeyCfg := cfg.Valkey
+		if valkeyCfg == nil {
+			valkeyCfg = DefaultValkeyConfig()
+		}
+		return NewValkeyStore(ctx, valkeyCfg, logger)
 
 	default:
-		return nil, fmt.Errorf("unsupported store type: %s (supported: postgres, sqlite-file, sqlite-memory)", cfg.Type)
+		return nil, fmt.Errorf("unsupported store type: %s (supported: postgres, postgres-sharded, sqlite-file, sqlite-memory, valkey)", cfg.Type)
 	}
 }
 
@@ -109,6 +132,7 @@ func DefaultConfig() *Config {
 		SQLite:          DefaultSQLiteConfig(),
 		Postgres:        DefaultPostgresConfig(),
 		PostgresSharded: DefaultPostgresShardedConfig(),
+		Valkey:          DefaultValkeyConfig(),
 	}
 }
 
@@ -172,6 +196,23 @@ func DefaultSQLiteConfig() *SQLiteConfig {
 	}
 }
 
+// DefaultValkeyConfig returns default Valkey configuration.
+func DefaultValkeyConfig() *ValkeyConfig {
+	return &ValkeyConfig{
+		Addr:              "localhost:6379",
+		Shards:            nil,
+		PublishPubSub:     false,
+		LeaseReapInterval: "1s",
+		LeaseReapBatch:    200,
+		SlimEvents:        false,
+		DeferEvents:       false,
+		EventBatchSize:    100,
+		ShardMapFile:      "",
+		NodeID:            "",
+		AdvertiseAddr:     "",
+	}
+}
+
 func normalizeStoreType(value StoreType) StoreType {
 	switch StoreType(strings.TrimSpace(strings.ToLower(string(value)))) {
 	case "", StoreTypePostgres:
@@ -182,6 +223,8 @@ func normalizeStoreType(value StoreType) StoreType {
 		return StoreTypeSQLite
 	case StoreTypeSQLiteMem:
 		return StoreTypeSQLiteMem
+	case StoreTypeValkey:
+		return StoreTypeValkey
 	default:
 		return value
 	}
