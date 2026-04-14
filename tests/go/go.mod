@@ -1,3 +1,3 @@
 module github.com/urobora-ai/agentspaces-tests-go-storage
 
-go 1.25.8
+go 1.25.9

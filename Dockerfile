@@ -1,5 +1,5 @@
 # Build stage
-FROM public.ecr.aws/docker/library/golang:1.25.8-alpine AS builder
+FROM public.ecr.aws/docker/library/golang:1.25.9-alpine AS builder
 
 WORKDIR /app
 
