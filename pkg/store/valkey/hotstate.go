@@ -1,7 +1,6 @@
 package valkey
 
 import (
-	"strconv"
 	"strings"
 
 	json "github.com/goccy/go-json"
@@ -30,63 +29,6 @@ func decodeHotAgentState(raw string) (*hotAgentState, error) {
 		return nil, err
 	}
 	return &state, nil
-}
-
-func hotStateFromAgent(t *agent.Agent) *hotAgentState {
-	if t == nil {
-		return nil
-	}
-	namespaceID := strings.TrimSpace(t.NamespaceID)
-	if namespaceID == "" && t.Metadata != nil {
-		namespaceID = strings.TrimSpace(t.Metadata[namespaceMetadataKey])
-	}
-	queue := ""
-	createdMS := t.CreatedAt.UTC().UnixMilli()
-	queueCreatedMS := createdMS
-	leaseDurationMS := int64(0)
-	if t.Metadata != nil {
-		queue = strings.TrimSpace(t.Metadata[queueMetadataKey])
-		if raw := strings.TrimSpace(t.Metadata[internalCreatedMsKey]); raw != "" {
-			if parsed, err := strconv.ParseInt(raw, 10, 64); err == nil {
-				createdMS = parsed
-			}
-		}
-		if raw := strings.TrimSpace(t.Metadata[queueCreatedMsKey]); raw != "" {
-			if parsed, err := strconv.ParseInt(raw, 10, 64); err == nil {
-				queueCreatedMS = parsed
-			}
-		}
-		if raw := strings.TrimSpace(t.Metadata["lease_ms"]); raw != "" {
-			if parsed, err := strconv.ParseInt(raw, 10, 64); err == nil && parsed > 0 {
-				leaseDurationMS = parsed
-			}
-		}
-		if leaseDurationMS == 0 {
-			if raw := strings.TrimSpace(t.Metadata["lease_sec"]); raw != "" {
-				if parsed, err := strconv.ParseInt(raw, 10, 64); err == nil && parsed > 0 {
-					leaseDurationMS = parsed * 1000
-				}
-			}
-		}
-	}
-	leaseUntilMS := int64(0)
-	if !t.LeaseUntil.IsZero() {
-		leaseUntilMS = t.LeaseUntil.UTC().UnixMilli()
-	}
-	return &hotAgentState{
-		ID:           t.ID,
-		Kind:         t.Kind,
-		Status:       t.Status,
-		NamespaceID:  namespaceID,
-		Queue:        queue,
-		Owner:        t.Owner,
-		LeaseToken:   t.LeaseToken,
-		LeaseMS:      leaseDurationMS,
-		LeaseUntilMS: leaseUntilMS,
-		Version:      t.Version,
-		CreatedMS:    createdMS,
-		QueueCreated: queueCreatedMS,
-	}
 }
 
 func queryRequiresFullAgent(query *agent.Query) bool {

@@ -2336,23 +2336,6 @@ func leaseDurationFromMetadata(metadata map[string]string, fallback time.Duratio
 	return fallback
 }
 
-func (s *ValkeyStore) getHotStateFromShard(ctx context.Context, shard *shardHandle, id string) (*hotAgentState, error) {
-	if shard == nil {
-		return nil, nil
-	}
-	raw, err := shard.client.Do(ctx, shard.client.B().Get().Key(hotStateKey(id)).Build()).ToString()
-	if err != nil {
-		if isValkeyNil(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	if raw == "" {
-		return nil, nil
-	}
-	return decodeHotAgentState(raw)
-}
-
 func (s *ValkeyStore) getManyHotStatesFromShard(ctx context.Context, shard *shardHandle, ids []string) (map[string]*hotAgentState, error) {
 	if shard == nil || len(ids) == 0 {
 		return map[string]*hotAgentState{}, nil
